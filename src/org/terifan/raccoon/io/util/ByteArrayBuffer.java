@@ -1,9 +1,9 @@
 package org.terifan.raccoon.io.util;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import org.terifan.raccoon.io.EOFException;
 
 
 public final class ByteArrayBuffer
@@ -573,7 +573,7 @@ public final class ByteArrayBuffer
 			if (mBitBuffer == -1)
 			{
 				mReadBitCount = 0;
-				throw new IllegalStateException("Premature end of stream");
+				throw new EOFException("Premature end of stream");
 			}
 		}
 
@@ -753,7 +753,7 @@ public final class ByteArrayBuffer
 			int c = readInt8();
 			if (c == -1)
 			{
-				throw new IllegalStateException("Premature end of stream");
+				throw new EOFException("Premature end of stream");
 			}
 			aDestination.writeInt8(c);
 		}
