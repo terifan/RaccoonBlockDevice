@@ -1,8 +1,8 @@
 package test;
 
 import java.nio.file.Paths;
-import org.terifan.raccoon.io.managed.ManagedBlockDevice;
-import org.terifan.raccoon.io.physical.FileBlockDevice;
+import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
+import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
 
 
 public class Test
@@ -13,6 +13,8 @@ public class Test
 		{
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
 			{
+				dev.resize(0);
+
 				long pos1 = dev.allocBlock(1);
 				long pos2 = dev.allocBlock(1);
 				dev.commit(); // allocs 2
