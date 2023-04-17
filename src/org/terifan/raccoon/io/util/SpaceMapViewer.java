@@ -1,10 +1,7 @@
 package org.terifan.raccoon.io.util;
 
-import java.awt.Color;
 import java.awt.Graphics;
 import javax.swing.JPanel;
-import org.terifan.raccoon.io.managed.ManagedBlockDevice;
-import org.terifan.raccoon.io.managed.RangeMap;
 
 
 public class SpaceMapViewer extends JPanel
