@@ -1,9 +1,9 @@
-package org.terifan.raccoon.util;
+package org.terifan.raccoon.io.util;
 
-import org.terifan.raccoon.io.EOFException;
 import org.terifan.raccoon.io.util.ByteArrayBuffer;
 import java.io.IOException;
 import java.util.Random;
+import org.terifan.raccoon.io.EOFException;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 

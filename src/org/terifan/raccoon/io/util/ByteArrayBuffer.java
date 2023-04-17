@@ -138,7 +138,7 @@ public final class ByteArrayBuffer
 					return this;
 				}
 
-				throw new IllegalStateException("Buffer capacity cannot be increased, capacity " + mBuffer.length + ", offset " + mOffset + ", increment " + aIncrement);
+				throw new EOFException("Buffer capacity cannot be increased, capacity " + mBuffer.length + ", offset " + mOffset + ", increment " + aIncrement);
 			}
 
 			mBuffer = Arrays.copyOfRange(mBuffer, 0, Math.min(mLimit == NO_LIMIT ? Integer.MAX_VALUE : mLimit, (mOffset + aIncrement) * 3 / 2));
@@ -216,7 +216,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new IllegalStateException("Variable int exceeds maximum length");
+		throw new EOFException("Variable int exceeds maximum length");
 	}
 
 
@@ -263,7 +263,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new IllegalStateException("Variable long exceeds maximum length");
+		throw new EOFException("Variable long exceeds maximum length");
 	}
 
 
