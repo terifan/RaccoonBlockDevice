@@ -2,25 +2,25 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.physical.IPhysicalBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 
 
-public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
+public class ManagedBlockDevice implements AutoCloseable
 {
 	private final static int RESERVED_BLOCKS = 2;
 
-	private IPhysicalBlockDevice mPhysBlockDevice;
+	private PhysicalBlockDevice mPhysBlockDevice;
 	private SuperBlock mSuperBlock;
 	private int mBlockSize;
 	private boolean mModified;
 	private boolean mWasCreated;
 	private boolean mDoubleCommit;
 	private SpaceMap mSpaceMap;
-	private Document mApplicationMetadata;
+	private Document mMetadata;
 
 
-	public ManagedBlockDevice(IPhysicalBlockDevice aBlockDevice)
+	public ManagedBlockDevice(PhysicalBlockDevice aBlockDevice)
 	{
 		if (aBlockDevice == null)
 		{
@@ -33,8 +33,8 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 
 		mPhysBlockDevice = aBlockDevice;
 		mBlockSize = aBlockDevice.getBlockSize();
-		mApplicationMetadata = new Document();
-		mWasCreated = mPhysBlockDevice.length() < RESERVED_BLOCKS;
+		mMetadata = new Document();
+		mWasCreated = mPhysBlockDevice.size() < RESERVED_BLOCKS;
 		mDoubleCommit = true;
 
 		init();
@@ -96,37 +96,53 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	public boolean isDoubleCommitEnabled()
-	{
-		return mDoubleCommit;
-	}
-
-
-	@Override
+	/**
+	 * @return true if the block device has pending changes requiring a commit.
+	 */
 	public boolean isModified()
 	{
 		return mModified;
 	}
 
 
-	@Override
-	public Document getApplicationMetadata()
+	/**
+	 * Note: the serialized Document must be shorter than one block length minus 256 bytes.
+	 *
+	 * @return a Document containing information about the application using the block device.
+	 */
+	public Document getMetadata()
 	{
-		return mApplicationMetadata;
+		return mMetadata;
 	}
 
 
-	@Override
+	/**
+	 * Note: the serialized Document must be shorter than one block length minus 256 bytes.
+	 *
+	 * @param aMetadata sets the metadata document for this BlockDevice.
+	 */
+	public ManagedBlockDevice setMetadata(Document aMetadata)
+	{
+		mMetadata.clear().putAll(aMetadata);
+		return this;
+	}
+
+
+	/**
+	 * @return the current transaction id. This value is incremented for each commit.
+	 */
 	public long getTransactionId()
 	{
 		return mSuperBlock.getTransactionId();
 	}
 
 
-	@Override
-	public long length()
+	/**
+	 * @return total number of blocks in this device.
+	 */
+	public long size()
 	{
-		return mPhysBlockDevice.length() - RESERVED_BLOCKS;
+		return mPhysBlockDevice.size() - RESERVED_BLOCKS;
 	}
 
 
@@ -146,27 +162,27 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
-	public void forceClose()
-	{
-		mSpaceMap.reset();
+//	public void forceClose()
+//	{
+//		mSpaceMap.reset();
+//
+//		if (mPhysBlockDevice != null)
+//		{
+//			mPhysBlockDevice.forceClose();
+//			mPhysBlockDevice = null;
+//		}
+//	}
 
-		if (mPhysBlockDevice != null)
-		{
-			mPhysBlockDevice.forceClose();
-			mPhysBlockDevice = null;
-		}
-	}
 
-
-	@Override
 	public int getBlockSize()
 	{
 		return mBlockSize;
 	}
 
 
-	@Override
+	/**
+	 * Allocate a sequence of blocks on the device.
+	 */
 	public long allocBlock(int aBlockCount)
 	{
 		long blockIndex = allocBlockInternal(aBlockCount) - RESERVED_BLOCKS;
@@ -188,7 +204,11 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
+	/**
+	 * Free a block from the device.
+	 *
+	 * @param aBlockIndex the index of the block being freed.
+	 */
 	public void freeBlock(long aBlockIndex, int aBlockCount)
 	{
 		if (aBlockIndex < 0)
@@ -210,7 +230,6 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
 	public void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
 		if (aBlockIndex < 0)
@@ -244,7 +263,6 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
 	public void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
 		if (aBlockIndex < 0)
@@ -276,7 +294,11 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
+	/**
+	 * Commit any pending blocks.
+	 *
+	 * @param aMetadata force update of metadata
+	 */
 	public void commit(boolean aMetadata)
 	{
 		if (mModified)
@@ -306,14 +328,18 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	}
 
 
-	@Override
+	/**
+	 * Commit any pending blocks.
+	 */
 	public void commit()
 	{
 		commit(false);
 	}
 
 
-	@Override
+	/**
+	 * Rollback any pending blocks.
+	 */
 	public void rollback()
 	{
 		if (mModified)
@@ -358,7 +384,7 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 			throw new IllegalStateException("Database appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getTransactionId() + " / " + superBlockTwo.getTransactionId());
 		}
 
-		mApplicationMetadata = mSuperBlock.getMetadata();
+		mMetadata = mSuperBlock.getMetadata();
 
 		Log.dec();
 	}
@@ -373,39 +399,38 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 		Log.i("write super block %d", pageIndex);
 		Log.inc();
 
-		mSuperBlock.write(mPhysBlockDevice, pageIndex, mApplicationMetadata);
+		mSuperBlock.write(mPhysBlockDevice, pageIndex, mMetadata);
 
 		Log.dec();
 	}
 
 
-	@Override
-	public String toString()
-	{
-		return getSpaceMap();
-	}
-
-
-	/**
-	 * @return the space map layout as a String (ranges of free blocks). If the space map is fragmented this may be a long String.
-	 */
-	public String getSpaceMap()
-	{
-		return mSpaceMap.getRangeMap().toString();
-	}
-
-
-	public RangeMap getRangeMap()
-	{
-		return mSpaceMap.getRangeMap();
-	}
+//	@Override
+//	public String toString()
+//	{
+//		return mSpaceMap.getRangeMap().toString();
+//	}
+//
+//
+//	/**
+//	 * @return the space map layout as a String (ranges of free blocks). If the space map is fragmented this may be a long String.
+//	 */
+//	public String getSpaceMap()
+//	{
+//		return mSpaceMap.getRangeMap().toString();
+//	}
+//
+//
+//	public RangeMap getRangeMap()
+//	{
+//		return mSpaceMap.getRangeMap();
+//	}
 
 
 	/**
 	 * @return the maximum available space this block device can theoretically allocate. This value may be greater than what the underlying
 	 * block device can support.
 	 */
-	@Override
 	public long getMaximumSpace()
 	{
 		return mSpaceMap.getRangeMap().getFreeSpace();
@@ -415,41 +440,44 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	/**
 	 * @return the size of the underlying block device, ie. size of a file acting as a block storage.
 	 */
-	@Override
 	public long getAllocatedSpace()
 	{
-		return mPhysBlockDevice.length();
+		return mPhysBlockDevice.size();
 	}
 
 
 	/**
 	 * @return the number of free blocks within the allocated space.
 	 */
-	@Override
 	public long getFreeSpace()
 	{
-		return mPhysBlockDevice.length() - mSpaceMap.getRangeMap().getUsedSpace();
+		return mPhysBlockDevice.size() - mSpaceMap.getRangeMap().getUsedSpace();
 	}
 
 
 	/**
 	 * @return the number of blocks actually used.
 	 */
-	@Override
 	public long getUsedSpace()
 	{
 		return mSpaceMap.getRangeMap().getUsedSpace();
 	}
 
 
-	@Override
+	/**
+	 * Truncates or expands this block device to the number of blocks specified.
+	 *
+	 * @param aNumberOfBlocks number of blocks
+	 */
 	public void resize(long aNumberOfBlocks)
 	{
 		mPhysBlockDevice.resize(RESERVED_BLOCKS + aNumberOfBlocks);
 	}
 
 
-	@Override
+	/**
+	 * Frees all blocks.
+	 */
 	public void clear()
 	{
 		mPhysBlockDevice.resize(0);
@@ -464,11 +492,5 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	{
 		int s = mPhysBlockDevice.getBlockSize();
 		return aSize + ((s - (aSize % s)) % s);
-	}
-
-
-	public IPhysicalBlockDevice getPhysicalBlockDevice()
-	{
-		return mPhysBlockDevice;
 	}
 }

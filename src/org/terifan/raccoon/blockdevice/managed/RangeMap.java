@@ -7,7 +7,7 @@ import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 
 public class RangeMap implements Cloneable
 {
-	private TreeMap<Integer,Integer> mMap;
+	private TreeMap<Integer, Integer> mMap;
 	private int mSpace;
 
 
@@ -28,7 +28,7 @@ public class RangeMap implements Cloneable
 		int start = aOffset;
 		int end = aOffset + aSize;
 
-		assert end > start : end+" > "+start;
+		assert end > start : end + " > " + start;
 
 		Integer before = mMap.floorKey(start);
 		Integer after = mMap.ceilingKey(start);
@@ -191,7 +191,7 @@ public class RangeMap implements Cloneable
 		try
 		{
 			RangeMap map = (RangeMap)super.clone();
-			map.mMap = (TreeMap<Integer,Integer>)this.mMap.clone();
+			map.mMap = (TreeMap<Integer, Integer>)this.mMap.clone();
 			return map;
 		}
 		catch (CloneNotSupportedException e)
@@ -207,7 +207,7 @@ public class RangeMap implements Cloneable
 
 		aDataOutput.writeVar32(mMap.size());
 
-		for (Entry<Integer,Integer> entry : mMap.entrySet())
+		for (Entry<Integer, Integer> entry : mMap.entrySet())
 		{
 			int index = entry.getKey();
 

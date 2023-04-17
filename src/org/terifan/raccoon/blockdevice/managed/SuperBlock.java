@@ -3,11 +3,11 @@ package org.terifan.raccoon.blockdevice.managed;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.physical.IPhysicalBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.security.random.ISAAC;
 import org.terifan.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
+import org.terifan.security.random.SecureRandom;
 
 
 class SuperBlock
@@ -15,9 +15,10 @@ class SuperBlock
 	private final static byte FORMAT_VERSION = 1;
 	private final static int CHECKSUM_SIZE = 32;
 	private final static int IV_SIZE = 16; // same as in SecureBlockDevice
-	private final static int HEADER_SIZE = 1 + 3 * 8 + 2;
-	private final static int TOTAL_OVERHEAD = IV_SIZE + CHECKSUM_SIZE + HEADER_SIZE + BlockPointer.SIZE;
-	private final static ISAAC PRNG = new ISAAC();
+//	private final static int HEADER_SIZE = 1 + 3 * 8 + 2;
+//	private final static int TOTAL_OVERHEAD = IV_SIZE + CHECKSUM_SIZE + HEADER_SIZE + BlockPointer.SIZE;
+	private final static int TOTAL_OVERHEAD = 256;
+	private final static SecureRandom PRNG = new SecureRandom();
 
 	private int mFormatVersion;
 	private long mCreateTime;
@@ -36,7 +37,7 @@ class SuperBlock
 	}
 
 
-	public SuperBlock(IPhysicalBlockDevice aBlockDevice, long aBlockIndex, long aTransactionId)
+	public SuperBlock(PhysicalBlockDevice aBlockDevice, long aBlockIndex, long aTransactionId)
 	{
 		this(aTransactionId);
 
@@ -98,7 +99,7 @@ class SuperBlock
 	}
 
 
-	public void read(IPhysicalBlockDevice aBlockDevice, long aBlockIndex)
+	public void read(PhysicalBlockDevice aBlockDevice, long aBlockIndex)
 	{
 		int blockSize = aBlockDevice.getBlockSize();
 
@@ -113,7 +114,7 @@ class SuperBlock
 			aBlockDevice.readBlock(aBlockIndex, buffer.array(), 0, buffer.capacity(), new int[4]);
 		}
 
-		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, aBlockIndex);
+		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
 
 		buffer.position(0);
 
@@ -126,7 +127,7 @@ class SuperBlock
 	}
 
 
-	public void write(IPhysicalBlockDevice aBlockDevice, long aBlockIndex, Document aMetadata)
+	public void write(PhysicalBlockDevice aBlockDevice, long aBlockIndex, Document aMetadata)
 	{
 		if (aBlockIndex < 0)
 		{
@@ -148,7 +149,7 @@ class SuperBlock
 			PRNG.nextBytes(buffer.array(), buffer.position(), buffer.remaining() - IV_SIZE);
 		}
 
-		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, aBlockIndex);
+		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
 
 		buffer.position(0);
 		buffer.writeInt64(hash[0]);

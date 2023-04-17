@@ -25,7 +25,7 @@ public class SecureBlockDeviceNGTest
 			device.writeBlock(0, new byte[4096], 0, 4096, new int[4]);
 		}
 
-		assertEquals(blockDevice.length(), 3);
+		assertEquals(blockDevice.size(), 3);
 
 		try (SecureBlockDevice device = SecureBlockDevice.open(accessCredentials, blockDevice))
 		{

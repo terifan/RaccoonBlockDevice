@@ -4,14 +4,14 @@ import java.io.Serializable;
 import java.util.Arrays;
 import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
-import org.terifan.raccoon.blockdevice.util.ByteArrayUtil;
-import org.terifan.raccoon.blockdevice.util.ByteArrayUtil;
-import org.terifan.raccoon.blockdevice.util.Console;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt64;
 import org.terifan.raccoon.blockdevice.util.Console;
 
 
-public class BlockPointer implements Serializable
+public final class BlockPointer implements Serializable
 {
 	private final static long serialVersionUID = 1;
 	public final static int SIZE = 128;
@@ -107,7 +107,7 @@ public class BlockPointer implements Serializable
 
 	public int getAllocatedSize()
 	{
-		return ByteArrayUtil.getInt32(mBuffer, OFS_ALLOCATED_SIZE);
+		return getInt32(mBuffer, OFS_ALLOCATED_SIZE);
 	}
 
 
@@ -115,33 +115,33 @@ public class BlockPointer implements Serializable
 	{
 		assert aAllocBlocks >= 0;
 
-		ByteArrayUtil.putInt32(mBuffer, OFS_ALLOCATED_SIZE, aAllocBlocks);
+		putInt32(mBuffer, OFS_ALLOCATED_SIZE, aAllocBlocks);
 		return this;
 	}
 
 
 	public int getLogicalSize()
 	{
-		return ByteArrayUtil.getInt32(mBuffer, OFS_LOGICAL_SIZE);
+		return getInt32(mBuffer, OFS_LOGICAL_SIZE);
 	}
 
 
 	public BlockPointer setLogicalSize(int aLogicalSize)
 	{
-		ByteArrayUtil.putInt32(mBuffer, OFS_LOGICAL_SIZE, aLogicalSize);
+		putInt32(mBuffer, OFS_LOGICAL_SIZE, aLogicalSize);
 		return this;
 	}
 
 
 	public int getPhysicalSize()
 	{
-		return ByteArrayUtil.getInt32(mBuffer, OFS_PHYSICAL_SIZE);
+		return getInt32(mBuffer, OFS_PHYSICAL_SIZE);
 	}
 
 
 	public BlockPointer setPhysicalSize(int aPhysicalSize)
 	{
-		ByteArrayUtil.putInt32(mBuffer, OFS_PHYSICAL_SIZE, aPhysicalSize);
+		putInt32(mBuffer, OFS_PHYSICAL_SIZE, aPhysicalSize);
 		return this;
 	}
 
@@ -150,14 +150,14 @@ public class BlockPointer implements Serializable
 	{
 		assert aBlockKey.length == 8;
 
-		aBlockKey[0] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 0);
-		aBlockKey[1] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 4);
-		aBlockKey[2] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 8);
-		aBlockKey[3] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 12);
-		aBlockKey[4] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 16);
-		aBlockKey[5] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 20);
-		aBlockKey[6] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 24);
-		aBlockKey[7] = ByteArrayUtil.getInt32(mBuffer, OFS_BLOCK_KEY + 28);
+		aBlockKey[0] = getInt32(mBuffer, OFS_BLOCK_KEY + 0);
+		aBlockKey[1] = getInt32(mBuffer, OFS_BLOCK_KEY + 4);
+		aBlockKey[2] = getInt32(mBuffer, OFS_BLOCK_KEY + 8);
+		aBlockKey[3] = getInt32(mBuffer, OFS_BLOCK_KEY + 12);
+		aBlockKey[4] = getInt32(mBuffer, OFS_BLOCK_KEY + 16);
+		aBlockKey[5] = getInt32(mBuffer, OFS_BLOCK_KEY + 20);
+		aBlockKey[6] = getInt32(mBuffer, OFS_BLOCK_KEY + 24);
+		aBlockKey[7] = getInt32(mBuffer, OFS_BLOCK_KEY + 28);
 		return aBlockKey;
 	}
 
@@ -166,66 +166,66 @@ public class BlockPointer implements Serializable
 	{
 		assert aBlockKey.length == 8;
 
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 0, aBlockKey[0]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 4, aBlockKey[1]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 8, aBlockKey[2]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 12, aBlockKey[3]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 16, aBlockKey[4]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 20, aBlockKey[5]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 24, aBlockKey[6]);
-		ByteArrayUtil.putInt32(mBuffer, OFS_BLOCK_KEY + 28, aBlockKey[7]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 0, aBlockKey[0]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 4, aBlockKey[1]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 8, aBlockKey[2]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 12, aBlockKey[3]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 16, aBlockKey[4]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 20, aBlockKey[5]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 24, aBlockKey[6]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 28, aBlockKey[7]);
 		return this;
 	}
 
 
 	public long getBlockIndex0()
 	{
-		return ByteArrayUtil.getInt64(mBuffer, OFS_OFFSET0);
+		return getInt64(mBuffer, OFS_OFFSET0);
 	}
 
 
 	public BlockPointer setBlockIndex0(long aBlockIndex)
 	{
-		ByteArrayUtil.putInt64(mBuffer, OFS_OFFSET0, aBlockIndex);
+		putInt64(mBuffer, OFS_OFFSET0, aBlockIndex);
 		return this;
 	}
 
 
 	public long getBlockIndex1()
 	{
-		return ByteArrayUtil.getInt64(mBuffer, OFS_OFFSET1);
+		return getInt64(mBuffer, OFS_OFFSET1);
 	}
 
 
 	public BlockPointer setBlockIndex1(long aBlockIndex)
 	{
-		ByteArrayUtil.putInt64(mBuffer, OFS_OFFSET1, aBlockIndex);
+		putInt64(mBuffer, OFS_OFFSET1, aBlockIndex);
 		return this;
 	}
 
 
 	public long getBlockIndex2()
 	{
-		return ByteArrayUtil.getInt64(mBuffer, OFS_OFFSET2);
+		return getInt64(mBuffer, OFS_OFFSET2);
 	}
 
 
 	public BlockPointer setBlockIndex2(long aBlockIndex)
 	{
-		ByteArrayUtil.putInt64(mBuffer, OFS_OFFSET2, aBlockIndex);
+		putInt64(mBuffer, OFS_OFFSET2, aBlockIndex);
 		return this;
 	}
 
 
 	public long getTransactionId()
 	{
-		return ByteArrayUtil.getInt64(mBuffer, OFS_TRANSACTION);
+		return getInt64(mBuffer, OFS_TRANSACTION);
 	}
 
 
 	public BlockPointer setTransactionId(long aTransactionId)
 	{
-		ByteArrayUtil.putInt64(mBuffer, OFS_TRANSACTION, aTransactionId);
+		putInt64(mBuffer, OFS_TRANSACTION, aTransactionId);
 		return this;
 	}
 
@@ -234,10 +234,10 @@ public class BlockPointer implements Serializable
 	{
 		assert aChecksum.length == 4;
 
-		aChecksum[0] = ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 0);
-		aChecksum[1] = ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 8);
-		aChecksum[2] = ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 16);
-		aChecksum[3] = ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 24);
+		aChecksum[0] = getInt64(mBuffer, OFS_CHECKSUM + 0);
+		aChecksum[1] = getInt64(mBuffer, OFS_CHECKSUM + 8);
+		aChecksum[2] = getInt64(mBuffer, OFS_CHECKSUM + 16);
+		aChecksum[3] = getInt64(mBuffer, OFS_CHECKSUM + 24);
 		return aChecksum;
 	}
 
@@ -246,10 +246,10 @@ public class BlockPointer implements Serializable
 	{
 		assert aChecksum.length == 4;
 
-		ByteArrayUtil.putInt64(mBuffer, OFS_CHECKSUM + 0, aChecksum[0]);
-		ByteArrayUtil.putInt64(mBuffer, OFS_CHECKSUM + 8, aChecksum[1]);
-		ByteArrayUtil.putInt64(mBuffer, OFS_CHECKSUM + 16, aChecksum[2]);
-		ByteArrayUtil.putInt64(mBuffer, OFS_CHECKSUM + 24, aChecksum[3]);
+		putInt64(mBuffer, OFS_CHECKSUM + 0, aChecksum[0]);
+		putInt64(mBuffer, OFS_CHECKSUM + 8, aChecksum[1]);
+		putInt64(mBuffer, OFS_CHECKSUM + 16, aChecksum[2]);
+		putInt64(mBuffer, OFS_CHECKSUM + 24, aChecksum[3]);
 		return this;
 	}
 
@@ -258,10 +258,10 @@ public class BlockPointer implements Serializable
 	{
 		assert aChecksum.length == 4;
 
-		return aChecksum[0] == ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 0)
-			&& aChecksum[1] == ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 8)
-			&& aChecksum[2] == ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 16)
-			&& aChecksum[3] == ByteArrayUtil.getInt64(mBuffer, OFS_CHECKSUM + 24);
+		return aChecksum[0] == getInt64(mBuffer, OFS_CHECKSUM + 0)
+			&& aChecksum[1] == getInt64(mBuffer, OFS_CHECKSUM + 8)
+			&& aChecksum[2] == getInt64(mBuffer, OFS_CHECKSUM + 16)
+			&& aChecksum[3] == getInt64(mBuffer, OFS_CHECKSUM + 24);
 	}
 
 

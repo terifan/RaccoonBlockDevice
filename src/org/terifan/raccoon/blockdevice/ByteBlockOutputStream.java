@@ -7,7 +7,7 @@ import java.util.Arrays;
 /**
  * OutputStream will grow buffer in steps of a defined size
  */
-public class ByteBlockOutputStream extends OutputStream
+class ByteBlockOutputStream extends OutputStream
 {
 	private int mOffset;
 	private byte[] mBuffer;

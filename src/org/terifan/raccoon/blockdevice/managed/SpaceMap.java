@@ -5,11 +5,11 @@ import org.terifan.raccoon.blockdevice.BlockType;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.CompressionParam;
 import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.physical.IPhysicalBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.BlockKeyGenerator;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 
 
 class SpaceMap
@@ -30,7 +30,7 @@ class SpaceMap
 	}
 
 
-	public SpaceMap(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, IPhysicalBlockDevice aBlockDeviceDirect)
+	public SpaceMap(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
 	{
 		mUncommittedAllocations = new HashSet<>();
 
@@ -105,7 +105,7 @@ class SpaceMap
 	}
 
 
-	public void write(BlockPointer aSpaceMapBlockPointer, ManagedBlockDevice aBlockDevice, IPhysicalBlockDevice aBlockDeviceDirect)
+	public void write(BlockPointer aSpaceMapBlockPointer, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
 	{
 		Log.d("write space map");
 		Log.inc();
@@ -147,7 +147,7 @@ class SpaceMap
 	}
 
 
-	private RangeMap read(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, IPhysicalBlockDevice aBlockDeviceDirect)
+	private RangeMap read(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
 	{
 		BlockPointer blockPointer = aSuperBlock.getSpaceMapPointer();
 

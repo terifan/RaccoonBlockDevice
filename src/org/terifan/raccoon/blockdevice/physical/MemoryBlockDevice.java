@@ -10,7 +10,7 @@ import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
-public class MemoryBlockDevice implements IPhysicalBlockDevice
+public class MemoryBlockDevice implements PhysicalBlockDevice
 {
 	private final SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
 	private final int mBlockSize;
@@ -95,7 +95,7 @@ public class MemoryBlockDevice implements IPhysicalBlockDevice
 
 
 	@Override
-	public long length()
+	public long size()
 	{
 		return mStorage.isEmpty() ? 0L : mStorage.lastKey() + 1;
 	}

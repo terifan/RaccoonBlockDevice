@@ -3,7 +3,7 @@ package org.terifan.raccoon.blockdevice;
 import java.io.IOException;
 
 
-public class LZJB implements Compressor
+class LZJB implements Compressor
 {
 	private final static int NBBY = 8;
 	private final static int MATCH_BITS = 6;

@@ -13,7 +13,7 @@ import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
-public class FileBlockDevice implements IPhysicalBlockDevice
+public class FileBlockDevice implements PhysicalBlockDevice
 {
 	protected Path mPath;
 	protected FileChannel mFileChannel;
@@ -169,7 +169,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 
 
 	@Override
-	public long length()
+	public long size()
 	{
 		if (mFileChannel == null)
 		{

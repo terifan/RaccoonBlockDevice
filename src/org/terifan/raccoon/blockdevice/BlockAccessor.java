@@ -3,24 +3,23 @@ package org.terifan.raccoon.blockdevice;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.zip.Deflater;
-import org.terifan.raccoon.blockdevice.CompressionParam;
 import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_BEST;
 import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_DEFAULT;
 import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_FAST;
-import org.terifan.raccoon.blockdevice.managed.IManagedBlockDevice;
+import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.BlockKeyGenerator;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.security.messagedigest.MurmurHash3;
 
 
-public class BlockAccessor implements IBlockAccessor, AutoCloseable
+public class BlockAccessor implements AutoCloseable
 {
-	private final IManagedBlockDevice mBlockDevice;
+	private final ManagedBlockDevice mBlockDevice;
 	private final CompressionParam mCompressionParam;
 	private boolean mCloseUnderlyingDevice;
 
 
-	public BlockAccessor(IManagedBlockDevice aBlockDevice, CompressionParam aCompressionParam, boolean aCloseUnderlyingDevice)
+	public BlockAccessor(ManagedBlockDevice aBlockDevice, CompressionParam aCompressionParam, boolean aCloseUnderlyingDevice)
 	{
 		mBlockDevice = aBlockDevice;
 		mCompressionParam = aCompressionParam;
@@ -28,7 +27,7 @@ public class BlockAccessor implements IBlockAccessor, AutoCloseable
 	}
 
 
-	public IManagedBlockDevice getBlockDevice()
+	public ManagedBlockDevice getBlockDevice()
 	{
 		return mBlockDevice;
 	}
@@ -44,7 +43,6 @@ public class BlockAccessor implements IBlockAccessor, AutoCloseable
 	}
 
 
-	@Override
 	public synchronized void freeBlock(BlockPointer aBlockPointer)
 	{
 		try
@@ -65,7 +63,6 @@ public class BlockAccessor implements IBlockAccessor, AutoCloseable
 	}
 
 
-	@Override
 	public synchronized byte[] readBlock(BlockPointer aBlockPointer)
 	{
 		try
@@ -108,7 +105,6 @@ public class BlockAccessor implements IBlockAccessor, AutoCloseable
 	}
 
 
-	@Override
 	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aType)
 	{
 		long transactionId = getBlockDevice().getTransactionId();

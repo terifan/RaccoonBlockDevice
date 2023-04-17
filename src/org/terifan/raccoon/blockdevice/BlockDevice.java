@@ -1,7 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
 
-public interface IBlockDevice extends AutoCloseable
+public interface BlockDevice extends AutoCloseable
 {
 	/**
 	 * Read a single block from the device.
@@ -45,7 +45,7 @@ public interface IBlockDevice extends AutoCloseable
 	/**
 	 * @return number of blocks available on this device.
 	 */
-	long length();
+	long size();
 
 
 	/**
@@ -68,8 +68,8 @@ public interface IBlockDevice extends AutoCloseable
 	 *
 	 * Default implementation calls close.
 	 */
-	default void forceClose()
-	{
-		close();
-	}
+//	default void forceClose()
+//	{
+//		close();
+//	}
 }

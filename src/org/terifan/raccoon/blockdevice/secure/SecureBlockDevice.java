@@ -4,7 +4,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import org.terifan.raccoon.blockdevice.physical.FileAlreadyOpenException;
-import org.terifan.raccoon.blockdevice.physical.IPhysicalBlockDevice;
 import org.terifan.security.cryptography.BlockCipher;
 import org.terifan.security.messagedigest.MurmurHash3;
 import org.terifan.security.cryptography.SecretKey;
@@ -17,6 +16,7 @@ import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.security.cryptography.ciphermode.CipherMode;
+import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 
 
 /**
@@ -24,7 +24,7 @@ import org.terifan.security.cryptography.ciphermode.CipherMode;
  * contain a boot blocks which store the secret encryption keys used to encrypt all other blocks. All read and write operations
  * offset the index to ensure the boot blocks can never be read/written.
  */
-public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoCloseable
+public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseable
 {
 	private final static int BOOT_BLOCK_COUNT = 2;
 	private final static int RESERVED_BLOCKS = BOOT_BLOCK_COUNT;
@@ -51,7 +51,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 		PRNG = tmp;
 	}
 
-	private transient IPhysicalBlockDevice mBlockDevice;
+	private transient PhysicalBlockDevice mBlockDevice;
 	private transient CipherImplementation mCipherImplementation;
 
 
@@ -65,7 +65,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 	}
 
 
-	public static SecureBlockDevice create(AccessCredentials aAccessCredentials, IPhysicalBlockDevice aBlockDevice)
+	public static SecureBlockDevice create(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
 	{
 		if (aBlockDevice == null)
 		{
@@ -170,13 +170,13 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 	}
 
 
-	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, IPhysicalBlockDevice aBlockDevice)
+	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
 	{
 		return open(aAccessCredentials, aBlockDevice, 0);
 	}
 
 
-	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, IPhysicalBlockDevice aBlockDevice, long aBlockIndex)
+	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice, long aBlockIndex)
 	{
 		if (aBlockDevice == null)
 		{
@@ -393,9 +393,9 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 
 
 	@Override
-	public long length()
+	public long size()
 	{
-		return mBlockDevice.length() - RESERVED_BLOCKS;
+		return mBlockDevice.size() - RESERVED_BLOCKS;
 	}
 
 
