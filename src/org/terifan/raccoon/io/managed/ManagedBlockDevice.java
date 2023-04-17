@@ -1,7 +1,7 @@
 package org.terifan.raccoon.io.managed;
 
 import org.terifan.raccoon.document.Document;
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 import org.terifan.raccoon.io.physical.IPhysicalBlockDevice;
 import org.terifan.raccoon.io.util.Log;
 
@@ -173,7 +173,7 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 
 		if (blockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal block index allocated.");
+			throw new DeviceException("Illegal block index allocated.");
 		}
 
 		return blockIndex;
@@ -193,7 +193,7 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		freeBlockInternal(RESERVED_BLOCKS + aBlockIndex, aBlockCount);
@@ -215,11 +215,11 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 		if ((aBufferLength % mBlockSize) != 0)
 		{
-			throw new DatabaseIOException("Illegal buffer length: " + aBlockIndex);
+			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
 		writeBlockInternal(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
@@ -249,11 +249,11 @@ public class ManagedBlockDevice implements IManagedBlockDevice, AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 		if ((aBufferLength % mBlockSize) != 0)
 		{
-			throw new DatabaseIOException("Illegal buffer length: " + aBlockIndex);
+			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
 		readBlockInternal(aBlockIndex + RESERVED_BLOCKS, aBuffer, aBufferOffset, aBufferLength, aBlockKey);

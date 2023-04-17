@@ -2,7 +2,7 @@ package org.terifan.raccoon.io.managed;
 
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.io.util.ByteArrayBuffer;
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 import org.terifan.raccoon.io.physical.IPhysicalBlockDevice;
 import org.terifan.raccoon.io.secure.SecureBlockDevice;
 import org.terifan.raccoon.storage.BlockPointer;
@@ -119,7 +119,7 @@ class SuperBlock
 
 		if (buffer.readInt64() != hash[0] || buffer.readInt64() != hash[1] || buffer.readInt64() != hash[2] || buffer.readInt64() != hash[3])
 		{
-			throw new DatabaseIOException("Checksum error at block index " + aBlockIndex);
+			throw new DeviceException("Checksum error at block index " + aBlockIndex);
 		}
 
 		unmarshal(buffer);
@@ -130,7 +130,7 @@ class SuperBlock
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Block at illegal offset: " + aBlockIndex);
+			throw new DeviceException("Block at illegal offset: " + aBlockIndex);
 		}
 
 		mModifiedTime = System.currentTimeMillis();
@@ -173,7 +173,7 @@ class SuperBlock
 
 		if (TOTAL_OVERHEAD + metadata.length > aBuffer.capacity())
 		{
-			throw new DatabaseIOException("Application metadata exeeds maximum size: limit: " + (aBuffer.capacity() - TOTAL_OVERHEAD) + ", metadata: " + metadata.length);
+			throw new DeviceException("Application metadata exeeds maximum size: limit: " + (aBuffer.capacity() - TOTAL_OVERHEAD) + ", metadata: " + metadata.length);
 		}
 
 		aBuffer.writeInt8(mFormatVersion);

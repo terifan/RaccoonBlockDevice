@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 import org.terifan.raccoon.io.util.Log;
 
 
@@ -65,7 +65,7 @@ public class MemoryBlockDevice implements IPhysicalBlockDevice
 			}
 			else
 			{
-				throw new DatabaseIOException("Reading a free block: " + aBlockIndex);
+				throw new DeviceException("Reading a free block: " + aBlockIndex);
 			}
 
 			aBlockIndex++;

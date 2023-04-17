@@ -3,9 +3,9 @@ package org.terifan.raccoon.io;
 
 public interface BlockType
 {
-	static int FREE = 0;
-	static int SPACEMAP = 1;
-	static int BLOB_INDEX = 2;
-	static int BLOB_LEAF = 3;
-	static int HOLE = 4;
+	int FREE = 0;
+	int SPACEMAP = 1;
+	int BLOB_INDEX = 2;
+	int BLOB_LEAF = 3;
+	int HOLE = 4;
 }

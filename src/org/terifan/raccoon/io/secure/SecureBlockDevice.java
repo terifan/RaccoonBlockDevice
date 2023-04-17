@@ -14,7 +14,7 @@ import static org.terifan.raccoon.io.util.ByteArrayUtil.getBytes;
 import static org.terifan.raccoon.io.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.io.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.io.util.ByteArrayUtil.putInt32;
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 import org.terifan.raccoon.io.util.Log;
 import org.terifan.security.cryptography.ciphermode.CipherMode;
 
@@ -283,7 +283,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
@@ -304,7 +304,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
@@ -326,7 +326,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
@@ -359,7 +359,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DatabaseIOException("Illegal offset: " + aBlockIndex);
+			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
@@ -446,7 +446,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 			}
 			catch (Exception e)
 			{
-				throw new DatabaseIOException("Failed to read boot block " + i);
+				throw new DeviceException("Failed to read boot block " + i);
 			}
 
 			if (i == 0)
@@ -461,7 +461,7 @@ public final class SecureBlockDevice implements IPhysicalBlockDevice, AutoClosea
 
 				if (!Arrays.equals(original, decrypted))
 				{
-					throw new DatabaseIOException("Boot blocks are incompatible");
+					throw new DeviceException("Boot blocks are incompatible");
 				}
 			}
 		}

@@ -9,7 +9,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 import org.terifan.raccoon.io.util.Log;
 
 
@@ -62,7 +62,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -77,7 +77,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -92,7 +92,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -109,7 +109,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -126,7 +126,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -160,7 +160,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 				}
 				catch (IOException e)
 				{
-					throw new DatabaseIOException(e);
+					throw new DeviceException(e);
 				}
 				mFileChannel = null;
 			}
@@ -188,7 +188,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -204,7 +204,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 
@@ -225,7 +225,7 @@ public class FileBlockDevice implements IPhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DatabaseIOException(e);
+			throw new DeviceException(e);
 		}
 	}
 }

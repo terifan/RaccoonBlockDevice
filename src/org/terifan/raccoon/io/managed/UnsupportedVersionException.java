@@ -1,9 +1,9 @@
 package org.terifan.raccoon.io.managed;
 
-import org.terifan.raccoon.io.DatabaseIOException;
+import org.terifan.raccoon.io.DeviceException;
 
 
-public class UnsupportedVersionException extends DatabaseIOException
+public class UnsupportedVersionException extends DeviceException
 {
 	private static final long serialVersionUID = 1L;
 
