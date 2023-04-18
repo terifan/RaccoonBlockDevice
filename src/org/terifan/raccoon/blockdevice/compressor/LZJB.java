@@ -1,9 +1,9 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.IOException;
 
 
-class LZJB implements Compressor
+public class LZJB implements Compressor
 {
 	private final static int NBBY = 8;
 	private final static int MATCH_BITS = 6;

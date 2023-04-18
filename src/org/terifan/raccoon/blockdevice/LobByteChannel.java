@@ -1,5 +1,6 @@
 package org.terifan.raccoon.blockdevice;
 
+import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
@@ -20,6 +22,8 @@ public class LobByteChannel implements SeekableByteChannel
 	private final static int MAX_BLOCK_SIZE = 1024 * 1024;
 	private final static int HEADER_SIZE = 8;
 	private final static int INDIRECT_POINTER_THRESHOLD = 4;
+	private final static int BLOCKTYPE_DATA = 0;
+	private final static int BLOCKTYPE_INDEX = 1;
 
 	private BlockAccessor mBlockAccessor;
 	private ByteArrayBuffer mPersistedPointerBuffer;
@@ -37,6 +41,8 @@ public class LobByteChannel implements SeekableByteChannel
 	private int mChunkIndex;
 	private BlockPointer mBlockPointer;
 	private byte[] mHeader;
+	private CompressorLevel mIndexCompressor;
+	private CompressorLevel mDataCompressor;
 
 
 	public LobByteChannel(BlockAccessor aBlockAccessor, byte[] aHeader, LobOpenOption aOpenOption, Listener<LobByteChannel> aListener) throws IOException
@@ -44,6 +50,9 @@ public class LobByteChannel implements SeekableByteChannel
 		mHeader = aHeader;
 		mCloseListener = aListener;
 		mBlockAccessor = aBlockAccessor;
+
+		mIndexCompressor = CompressorLevel.ZLE;
+		mDataCompressor = CompressorLevel.NONE;
 
 		if (aOpenOption == LobOpenOption.REPLACE && aHeader != null)
 		{
@@ -281,7 +290,7 @@ public class LobByteChannel implements SeekableByteChannel
 			Log.inc();
 
 			buf.position(HEADER_SIZE);
-			BlockPointer bp = mBlockAccessor.writeBlock(buf.array(), 0, buf.capacity(), BlockType.BLOB_INDEX);
+			BlockPointer bp = mBlockAccessor.writeBlock(buf.array(), 0, buf.capacity(), BLOCKTYPE_INDEX, mIndexCompressor);
 			bp.marshal(buf);
 			buf.trim();
 
@@ -344,7 +353,7 @@ public class LobByteChannel implements SeekableByteChannel
 				}
 				else
 				{
-					BlockPointer bp = mBlockAccessor.writeBlock(mBuffer, 0, len, BlockType.BLOB_LEAF);
+					BlockPointer bp = mBlockAccessor.writeBlock(mBuffer, 0, len, BLOCKTYPE_DATA, mDataCompressor);
 					mPendingBlockPointsers.put(mChunkIndex, bp);
 				}
 			}

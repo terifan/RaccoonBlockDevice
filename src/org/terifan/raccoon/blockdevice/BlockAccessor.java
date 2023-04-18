@@ -2,10 +2,9 @@ package org.terifan.raccoon.blockdevice;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.zip.Deflater;
-import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_BEST;
-import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_DEFAULT;
-import static org.terifan.raccoon.blockdevice.CompressionParam.Level.DEFLATE_FAST;
+import org.terifan.raccoon.blockdevice.compressor.ByteBlockOutputStream;
+import org.terifan.raccoon.blockdevice.compressor.Compressor;
+import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.BlockKeyGenerator;
 import org.terifan.raccoon.blockdevice.util.Log;
@@ -15,14 +14,12 @@ import org.terifan.security.messagedigest.MurmurHash3;
 public class BlockAccessor implements AutoCloseable
 {
 	private final ManagedBlockDevice mBlockDevice;
-	private final CompressionParam mCompressionParam;
 	private boolean mCloseUnderlyingDevice;
 
 
-	public BlockAccessor(ManagedBlockDevice aBlockDevice, CompressionParam aCompressionParam, boolean aCloseUnderlyingDevice)
+	public BlockAccessor(ManagedBlockDevice aBlockDevice, boolean aCloseUnderlyingDevice)
 	{
 		mBlockDevice = aBlockDevice;
-		mCompressionParam = aCompressionParam;
 		mCloseUnderlyingDevice = aCloseUnderlyingDevice;
 	}
 
@@ -58,7 +55,7 @@ public class BlockAccessor implements AutoCloseable
 		}
 		catch (Exception | Error e)
 		{
-			throw new IllegalStateException(aBlockPointer.toString(), e);
+			throw new RaccoonIOException(aBlockPointer.toString(), e);
 		}
 	}
 
@@ -81,10 +78,12 @@ public class BlockAccessor implements AutoCloseable
 				throw new IOException("Checksum error in block " + aBlockPointer);
 			}
 
-			if (aBlockPointer.getCompressionAlgorithm() != CompressionParam.Level.NONE.ordinal())
+			Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].instance();
+
+			if (compressor != null)
 			{
 				byte[] tmp = new byte[aBlockPointer.getLogicalSize()];
-				getCompressor(aBlockPointer.getCompressionAlgorithm()).decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, tmp.length);
+				compressor.decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, tmp.length);
 				buffer = tmp;
 			}
 			else if (aBlockPointer.getLogicalSize() < buffer.length)
@@ -100,31 +99,28 @@ public class BlockAccessor implements AutoCloseable
 		}
 		catch (Exception | Error e)
 		{
-			throw new IllegalStateException("Error reading block: " + aBlockPointer, e);
+			throw new RaccoonIOException("Error reading block: " + aBlockPointer, e);
 		}
 	}
 
 
-	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aType)
+	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aBlockType, CompressorLevel aCompressorLevel)
 	{
 		long transactionId = getBlockDevice().getTransactionId();
-
 		BlockPointer blockPointer = null;
 
 		try
 		{
 			ByteBlockOutputStream compressedBlock = null;
-			CompressionParam.Level compressor = mCompressionParam.getCompressorLevel(aType);
 			boolean compressed = false;
 
-			if (compressor != CompressionParam.Level.NONE)
+			if (aCompressorLevel != CompressorLevel.NONE)
 			{
 				compressedBlock = new ByteBlockOutputStream(mBlockDevice.getBlockSize());
-				compressed = getCompressor(compressor.ordinal()).compress(aBuffer, aOffset, aLength, compressedBlock);
+				compressed = aCompressorLevel.instance().compress(aBuffer, aOffset, aLength, compressedBlock);
 			}
 
 			int physicalSize;
-
 			if (compressed && roundUp(compressedBlock.size()) < roundUp(aBuffer.length)) // use the compressed result only if we actual save one block or more
 			{
 				physicalSize = compressedBlock.size();
@@ -134,7 +130,7 @@ public class BlockAccessor implements AutoCloseable
 			{
 				physicalSize = aLength;
 				aBuffer = Arrays.copyOfRange(aBuffer, aOffset, aOffset + roundUp(aLength));
-				compressor = CompressionParam.Level.NONE;
+				aCompressorLevel = CompressorLevel.NONE;
 			}
 
 			assert aBuffer.length % mBlockDevice.getBlockSize() == 0;
@@ -142,17 +138,17 @@ public class BlockAccessor implements AutoCloseable
 			long blockIndex = mBlockDevice.allocBlock(aBuffer.length / mBlockDevice.getBlockSize());
 			int[] blockKey = BlockKeyGenerator.generate();
 
-			blockPointer = new BlockPointer();
-			blockPointer.setCompressionAlgorithm(compressor.ordinal());
-			blockPointer.setAllocatedSize(aBuffer.length);
-			blockPointer.setPhysicalSize(physicalSize);
-			blockPointer.setLogicalSize(aLength);
-			blockPointer.setTransactionId(transactionId);
-			blockPointer.setBlockType(aType);
-			blockPointer.setChecksumAlgorithm((byte)0); // not used
-			blockPointer.setChecksum(MurmurHash3.hash256(aBuffer, 0, physicalSize, transactionId));
-			blockPointer.setBlockKey(blockKey);
-			blockPointer.setBlockIndex0(blockIndex);
+			blockPointer = new BlockPointer()
+				.setCompressionAlgorithm(aCompressorLevel.ordinal())
+				.setAllocatedSize(aBuffer.length)
+				.setPhysicalSize(physicalSize)
+				.setLogicalSize(aLength)
+				.setTransactionId(transactionId)
+				.setBlockType(aBlockType)
+				.setChecksumAlgorithm((byte)0)
+				.setChecksum(MurmurHash3.hash256(aBuffer, 0, physicalSize, transactionId))
+				.setBlockKey(blockKey)
+				.setBlockIndex0(blockIndex);
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();
@@ -167,25 +163,7 @@ public class BlockAccessor implements AutoCloseable
 		}
 		catch (Exception | Error e)
 		{
-			throw new IllegalStateException("Error writing block: " + blockPointer, e);
-		}
-	}
-
-
-	private Compressor getCompressor(int aLevel)
-	{
-		switch (CompressionParam.Level.values()[aLevel])
-		{
-			case ZLE:
-				return new ZLE(mBlockDevice.getBlockSize());
-			case DEFLATE_FAST:
-				return new DeflateCompressor(Deflater.BEST_SPEED);
-			case DEFLATE_DEFAULT:
-				return new DeflateCompressor(Deflater.DEFAULT_COMPRESSION);
-			case DEFLATE_BEST:
-				return new DeflateCompressor(Deflater.BEST_COMPRESSION);
-			default:
-				throw new IllegalStateException("Illegal compressor: " + aLevel);
+			throw new RaccoonIOException("Error writing block: " + blockPointer, e);
 		}
 	}
 

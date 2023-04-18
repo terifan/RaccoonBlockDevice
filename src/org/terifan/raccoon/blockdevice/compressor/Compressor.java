@@ -1,9 +1,9 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.IOException;
 
 
-interface Compressor
+public interface Compressor
 {
 	boolean compress(byte[] aInput, int aInputOffset, int aInputLength, ByteBlockOutputStream aOutputStream);
 

@@ -1,6 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.ZLE;
+import org.terifan.raccoon.blockdevice.compressor.ByteBlockOutputStream;
+import org.terifan.raccoon.blockdevice.compressor.ZLE;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
@@ -38,9 +39,9 @@ public class ZeroCompressorNGTest
 		}
 
 		ByteBlockOutputStream baos = new ByteBlockOutputStream(512);
-		new ZLE(0).compress(input, srcOffset, length, baos);
+		new ZLE().compress(input, srcOffset, length, baos);
 
-		new ZLE(0).decompress(baos.getBuffer(), 0, baos.size(), output, dstOffset, length);
+		new ZLE().decompress(baos.getBuffer(), 0, baos.size(), output, dstOffset, length);
 
 		assertEquals(Arrays.copyOfRange(input, srcOffset, srcOffset + length), Arrays.copyOfRange(output, dstOffset, dstOffset + length));
 	}

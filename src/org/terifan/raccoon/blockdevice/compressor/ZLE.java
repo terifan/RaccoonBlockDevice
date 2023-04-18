@@ -1,21 +1,15 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.IOException;
 import java.util.Arrays;
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 
 
 /**
  * This is a fast and simple algorithm to eliminate runs of zeroes.
  */
-class ZLE implements Compressor
+public class ZLE implements Compressor
 {
-	public ZLE(int aPageSize)
-	{
-	}
-
-
 	@Override
 	public boolean compress(byte[] aInput, int aInputOffset, int aInputLength, ByteBlockOutputStream aOutputStream)
 	{

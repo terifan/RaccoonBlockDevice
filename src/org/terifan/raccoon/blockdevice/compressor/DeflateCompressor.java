@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -12,7 +12,7 @@ class DeflateCompressor implements Compressor
 	private int mLevel;
 
 
-	public DeflateCompressor(int aLevel)
+	DeflateCompressor(int aLevel)
 	{
 		mLevel = aLevel;
 	}
@@ -33,9 +33,8 @@ class DeflateCompressor implements Compressor
 		catch (IOException e)
 		{
 			e.printStackTrace(System.out);
+			return false;
 		}
-
-		return false;
 	}
 
 

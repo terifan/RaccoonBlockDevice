@@ -1,14 +1,11 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.raccoon.blockdevice.BlockAccessor;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
-import org.terifan.raccoon.blockdevice.BlockType;
-import org.terifan.raccoon.blockdevice.CompressionParam;
+import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.testng.annotations.Test;
 import static org.testng.AssertJUnit.*;
 import org.testng.annotations.DataProvider;
@@ -26,8 +23,8 @@ public class BlockAccessorNGTest
 		MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
 
 		ManagedBlockDevice managedBlockDevice = new ManagedBlockDevice(blockDevice);
-		BlockAccessor blockAccessor = new BlockAccessor(managedBlockDevice, CompressionParam.NO_COMPRESSION, true);
-		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, BlockType.FREE);
+		BlockAccessor blockAccessor = new BlockAccessor(managedBlockDevice, true);
+		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, 0, CompressorLevel.ZLE);
 		managedBlockDevice.commit();
 
 		assertEquals(2 + 1 + 3, managedBlockDevice.getAllocatedSpace()); // 2 superblock + 1 spacemap + 3 data

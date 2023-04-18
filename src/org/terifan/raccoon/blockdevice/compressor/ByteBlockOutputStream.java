@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -7,7 +7,7 @@ import java.util.Arrays;
 /**
  * OutputStream will grow buffer in steps of a defined size
  */
-class ByteBlockOutputStream extends OutputStream
+public class ByteBlockOutputStream extends OutputStream
 {
 	private int mOffset;
 	private byte[] mBuffer;
