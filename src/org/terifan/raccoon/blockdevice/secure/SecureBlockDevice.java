@@ -281,10 +281,8 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	@Override
 	public void writeBlock(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength, final int[] aIV)
 	{
-		if (aBlockIndex < 0)
-		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
-		}
+		assert aBlockIndex >= 0;
+		assert aIV.length == 4;
 
 		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
 		Log.inc();
@@ -293,7 +291,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 
 		mCipherImplementation.encrypt(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, aIV);
 
-		mBlockDevice.writeBlock(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
+		mBlockDevice.writeBlock(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, null); // block key is used by this blockdevice and not passed to lower levels
 
 		Log.dec();
 	}
@@ -302,15 +300,13 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	@Override
 	public void readBlock(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength, final int[] aIV)
 	{
-		if (aBlockIndex < 0)
-		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
-		}
+		assert aBlockIndex >= 0;
+		assert aIV.length == 4;
 
 		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
 		Log.inc();
 
-		mBlockDevice.readBlock(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
+		mBlockDevice.readBlock(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, null); // block key is used by this blockdevice and not passed to lower levels
 
 		mCipherImplementation.decrypt(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aIV);
 

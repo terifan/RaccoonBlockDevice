@@ -1,12 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.raccoon.blockdevice.BlockType;
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.security.random.SecureRandom;
 import org.testng.annotations.Test;
 
 
@@ -16,21 +11,50 @@ public class BlockPointerNGTest
 	public void testSomeMethod()
 	{
 		BlockPointer bp = new BlockPointer()
-			.setBlockType(BlockType.HOLE)
-			.setBlockLevel(0x02)
-			.setChecksumAlgorithm((byte)0x03)
-			.setCompressionAlgorithm((byte)0x04)
-			.setAllocatedSize(0x05060708)
-			.setLogicalSize(0x09101112)
-			.setPhysicalSize(0x13141516)
-			.setBlockIndex0(0x1718192021222324L)
-			.setBlockIndex1(0x2526272829303132L)
-			.setBlockIndex2(0x3334353637383940L)
-			.setTransactionId(0x4950515253545556L)
-			.setBlockKey(new SecureRandom(1).ints(8).toArray())
-			.setChecksum(new long[]{0x8990919293949596L,0x9798990102030405L,0x0607080910111213L,0x1415161718192021L})
+			.setBlockType(BlockType.FREE)
+			.setBlockLevel((byte)1)
+			.setChecksumAlgorithm((byte)2)
+			.setCompressionAlgorithm((byte)3)
+			.setAllocatedSize(0x11111111)
+			.setLogicalSize(0x22222222)
+			.setPhysicalSize(0x33333333)
+			.setBlockIndex0(0x4444444444444444L)
+			.setBlockIndex1(0x5555555555555555L)
+			.setBlockIndex2(0x6666666666666666L)
+			.setTransactionId(0x7777777777777777L)
+			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
+			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL,0xeeeeeeeeeeeeeeeeL,0xffffffffffffffffL})
 			;
 
 		Log.hexDump(bp.marshal(ByteArrayBuffer.alloc(BlockPointer.SIZE)).array(), 8);
+	}
+
+
+	@Test
+	public void testMarshalDocument()
+	{
+		BlockPointer bp = new BlockPointer()
+			.setBlockType(BlockType.FREE)
+			.setBlockLevel((byte)1)
+			.setChecksumAlgorithm((byte)2)
+			.setCompressionAlgorithm((byte)3)
+			.setAllocatedSize(100)
+			.setLogicalSize(50)
+			.setPhysicalSize(50)
+			.setBlockIndex0(3421654)
+			.setBlockIndex1(0)
+			.setBlockIndex2(0)
+			.setTransactionId(3216)
+			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
+			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL,0xeeeeeeeeeeeeeeeeL,0xffffffffffffffffL})
+			;
+
+		System.out.println(bp.marshalDoc());
+		System.out.println(bp.marshalDoc().toByteArray().length);
+		Log.hexDump(bp.marshalDoc().toByteArray());
+
+		System.out.println(bp.marshalDoc2());
+		System.out.println(bp.marshalDoc2().toByteArray().length);
+		Log.hexDump(bp.marshalDoc2().toByteArray());
 	}
 }

@@ -4,19 +4,20 @@ import java.util.HashSet;
 import org.terifan.raccoon.blockdevice.BlockType;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.secure.BlockKeyGenerator;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
+import org.terifan.security.random.SecureRandom;
 
 
 class SpaceMap
 {
-	private RangeMap mRangeMap;
-	private RangeMap mPendingRangeMap;
+	private final static SecureRandom PRNG = new SecureRandom();
 	private HashSet<Integer> mUncommittedAllocations;
+	private RangeMap mPendingRangeMap;
+	private RangeMap mRangeMap;
 
 
 	public SpaceMap()
@@ -25,7 +26,6 @@ class SpaceMap
 
 		mRangeMap = new RangeMap();
 		mRangeMap.add(0, Integer.MAX_VALUE);
-
 		mPendingRangeMap = mRangeMap.clone();
 	}
 
@@ -124,7 +124,7 @@ class SpaceMap
 		int allocSize = aBlockDevice.roundUp(buffer.position());
 
 		long blockIndex = aBlockDevice.allocBlockInternal(allocSize / blockSize);
-		int[] blockKey = BlockKeyGenerator.generate();
+		int[] blockKey = PRNG.ints(4).toArray();
 
 		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorLevel.NONE.ordinal());
 		aSpaceMapBlockPointer.setBlockType(BlockType.SPACEMAP);
@@ -172,7 +172,7 @@ class SpaceMap
 
 			ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockPointer.getAllocatedSize());
 
-			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey(new int[8]));
+			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey());
 
 			long[] hash = MurmurHash3.hash256(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getTransactionId());
 

@@ -230,6 +230,13 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
+	/**
+	 * Write one or more blocks to the device.
+	 *
+	 * @param aBlockIndex starting block index
+	 * @param aBuffer buffer to be written, must be a multiple of the device block size
+	 * @param aBlockKey 16 bytes (4 ints) key used to encrypt the block
+	 */
 	public void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
 		if (aBlockIndex < 0)

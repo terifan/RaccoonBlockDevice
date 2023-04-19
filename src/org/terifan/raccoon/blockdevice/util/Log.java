@@ -90,7 +90,7 @@ public class Log
 
 	public static void hexDump(byte[] aBuffer)
 	{
-		hexDump(aBuffer, 48);
+		hexDump(aBuffer, 32);
 	}
 
 
@@ -103,7 +103,7 @@ public class Log
 
 		for (int row = 0, offset = 0; offset < aBuffer.length && row < MR; row++)
 		{
-			hexText.append(String.format("%04d: ", row * LW));
+			hexText.append(Console.Color.BLACK_LIGHT + String.format("%04d: ", row * LW) + Console.Color.RESET);
 
 			int padding = 3 * LW + LW / 8;
 
@@ -113,8 +113,8 @@ public class Log
 
 				if (!(c < ' ' || c >= 128))
 				{
-					hexText.append(Console.Color.BLUE);
-					binText.append(Console.Color.BLUE);
+					hexText.append(Console.Color.CYAN);
+					binText.append(Console.Color.CYAN);
 				}
 				if (c >= '0' && c <= '9')
 				{

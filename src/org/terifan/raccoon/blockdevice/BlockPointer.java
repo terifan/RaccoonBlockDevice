@@ -9,26 +9,27 @@ import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt64;
 import org.terifan.raccoon.blockdevice.util.Console;
+import org.terifan.raccoon.document.Document;
 
 
 public final class BlockPointer implements Serializable
 {
 	private final static long serialVersionUID = 1;
-	public final static int SIZE = 128;
+	public final static int SIZE = 96;
 
-	private final static int OFS_FLAG_TYPE = 0;
-	private final static int OFS_FLAG_LEVEL = 1;
-	private final static int OFS_FLAG_CHECKSUM = 2;
-	private final static int OFS_FLAG_COMPRESSION = 3;
-	private final static int OFS_ALLOCATED_SIZE = 4;
-	private final static int OFS_LOGICAL_SIZE = 8;
-	private final static int OFS_PHYSICAL_SIZE = 12;
-	private final static int OFS_OFFSET0 = 16;
-	private final static int OFS_OFFSET1 = 24;
-	private final static int OFS_OFFSET2 = 32;
-	private final static int OFS_TRANSACTION = 40;
-	private final static int OFS_BLOCK_KEY = 48;
-	private final static int OFS_CHECKSUM = 80;
+	private final static int OFS_FLAG_TYPE = 0;			// 1	0
+	private final static int OFS_FLAG_LEVEL = 1;		// 1	1
+	private final static int OFS_FLAG_CHECKSUM = 2;		// 1	2
+	private final static int OFS_FLAG_COMPRESSION = 3;	// 1	3
+	private final static int OFS_ALLOCATED_SIZE = 4;	// 4	4..7
+	private final static int OFS_LOGICAL_SIZE = 8;		// 4	8..11
+	private final static int OFS_PHYSICAL_SIZE = 12;	// 4	12..15
+	private final static int OFS_OFFSET0 = 16;			// 8	16..23
+	private final static int OFS_OFFSET1 = 24;			// 8	24..31
+	private final static int OFS_OFFSET2 = 32;			// 8	32..40
+	private final static int OFS_TRANSACTION = 40;		// 8	40..47
+	private final static int OFS_BLOCK_KEY = 48;		// 16	48..63
+	private final static int OFS_CHECKSUM = 64;			// 32	64..95
 
 	private byte[] mBuffer;
 
@@ -146,34 +147,25 @@ public final class BlockPointer implements Serializable
 	}
 
 
-	public int[] getBlockKey(int[] aBlockKey)
+	public int[] getBlockKey()
 	{
-		assert aBlockKey.length == 8;
-
-		aBlockKey[0] = getInt32(mBuffer, OFS_BLOCK_KEY + 0);
-		aBlockKey[1] = getInt32(mBuffer, OFS_BLOCK_KEY + 4);
-		aBlockKey[2] = getInt32(mBuffer, OFS_BLOCK_KEY + 8);
-		aBlockKey[3] = getInt32(mBuffer, OFS_BLOCK_KEY + 12);
-		aBlockKey[4] = getInt32(mBuffer, OFS_BLOCK_KEY + 16);
-		aBlockKey[5] = getInt32(mBuffer, OFS_BLOCK_KEY + 20);
-		aBlockKey[6] = getInt32(mBuffer, OFS_BLOCK_KEY + 24);
-		aBlockKey[7] = getInt32(mBuffer, OFS_BLOCK_KEY + 28);
-		return aBlockKey;
+		int[] blockKey = new int[4];
+		blockKey[0] = getInt32(mBuffer, OFS_BLOCK_KEY + 0);
+		blockKey[1] = getInt32(mBuffer, OFS_BLOCK_KEY + 4);
+		blockKey[2] = getInt32(mBuffer, OFS_BLOCK_KEY + 8);
+		blockKey[3] = getInt32(mBuffer, OFS_BLOCK_KEY + 12);
+		return blockKey;
 	}
 
 
 	public BlockPointer setBlockKey(int... aBlockKey)
 	{
-		assert aBlockKey.length == 8;
+		assert aBlockKey.length == 4 : aBlockKey.length;
 
 		putInt32(mBuffer, OFS_BLOCK_KEY + 0, aBlockKey[0]);
 		putInt32(mBuffer, OFS_BLOCK_KEY + 4, aBlockKey[1]);
 		putInt32(mBuffer, OFS_BLOCK_KEY + 8, aBlockKey[2]);
 		putInt32(mBuffer, OFS_BLOCK_KEY + 12, aBlockKey[3]);
-		putInt32(mBuffer, OFS_BLOCK_KEY + 16, aBlockKey[4]);
-		putInt32(mBuffer, OFS_BLOCK_KEY + 20, aBlockKey[5]);
-		putInt32(mBuffer, OFS_BLOCK_KEY + 24, aBlockKey[6]);
-		putInt32(mBuffer, OFS_BLOCK_KEY + 28, aBlockKey[7]);
 		return this;
 	}
 
@@ -230,10 +222,9 @@ public final class BlockPointer implements Serializable
 	}
 
 
-	public long[] getChecksum(long[] aChecksum)
+	public long[] getChecksum()
 	{
-		assert aChecksum.length == 4;
-
+		long[] aChecksum = new long[4];
 		aChecksum[0] = getInt64(mBuffer, OFS_CHECKSUM + 0);
 		aChecksum[1] = getInt64(mBuffer, OFS_CHECKSUM + 8);
 		aChecksum[2] = getInt64(mBuffer, OFS_CHECKSUM + 16);
@@ -300,8 +291,10 @@ public final class BlockPointer implements Serializable
 		setPhysicalSize(aArray.getInt(5));
 		setTransactionId(aArray.getInt(6));
 		setBlockIndex0(aArray.getArray(7).getLong(0));
-		System.arraycopy(aArray.getBinary(8), 0, mBuffer, OFS_BLOCK_KEY, 32);
-		System.arraycopy(aArray.getBinary(9), 0, mBuffer, OFS_CHECKSUM, 32);
+		setBlockIndex1(aArray.getArray(7).getLong(1));
+		setBlockIndex2(aArray.getArray(7).getLong(2));
+		setBlockKey(aArray.getArray(8).toInts());
+		setChecksum(aArray.getArray(9).toLongs());
 		return this;
 	}
 
@@ -315,86 +308,45 @@ public final class BlockPointer implements Serializable
 			getAllocatedSize(),
 			getLogicalSize(),
 			getPhysicalSize(),
-			getTransactionId(),
-			Array.of(getBlockIndex0()),
-			Arrays.copyOfRange(mBuffer, OFS_BLOCK_KEY, OFS_BLOCK_KEY + 32),
-			Arrays.copyOfRange(mBuffer, OFS_CHECKSUM, OFS_CHECKSUM + 32)
+			Array.of(getBlockIndex0(), getBlockIndex1(), getBlockIndex2()),
+			Array.of(getBlockKey()),
+			Array.of(getChecksum()),
+			getTransactionId()
 		);
 	}
 
 
-//	public BlockPointer unmarshalDoc(Document aDocument)
-//	{
-//		setBlockType(BlockType.values()[aDocument.getInt("type")]);
-//		setBlockLevel(aDocument.getInt("lvl"));
-//		setCompressionAlgorithm(aDocument.getInt("comp"));
-//		setAllocatedSize(aDocument.getInt("alloc"));
-//		setLogicalSize(aDocument.getInt("logic"));
-//		setPhysicalSize(aDocument.getInt("phys"));
-//		setTransactionId(aDocument.getInt("tx"));
-//		setBlockIndex0(aDocument.getLongArray("blocks")[0]);
-//		setBlockKey(aDocument.getLongArray("key"));
-//		setChecksum(aDocument.getLongArray("chk"));
-//		return this;
-//	}
-//
-//
-//	public Document marshalDoc()
-//	{
-//		Document doc = new Document()
-//			.putNumber("type", getBlockType().ordinal())
-//			.putNumber("lvl", getBlockLevel())
-//			.putNumber("comp", getCompressionAlgorithm())
-//			.putNumber("alloc", getAllocatedSize())
-//			.putNumber("logic", getLogicalSize())
-//			.putNumber("phys", getPhysicalSize())
-//			.putNumber("tx", getTransactionId())
-//			.putArray("blocks", Array.of(getBlockIndex0()))
-//			.putArray("key", Array.of(getBlockKey(new long[4])))
-//			.putArray("chk", Array.of(getChecksum(new long[4])))
-//			;
-//
-//		return doc;
-//	}
+	public BlockPointer unmarshalDoc2(Document aDocument)
+	{
+		setBlockType(aDocument.getInt("t"));
+		setBlockLevel(aDocument.getInt("l"));
+		setCompressionAlgorithm(aDocument.getInt("c"));
+		setAllocatedSize(aDocument.getInt("a"));
+		setLogicalSize(aDocument.getInt("s"));
+		setPhysicalSize(aDocument.getInt("p"));
+		setTransactionId(aDocument.getInt("x"));
+		setBlockIndex0(aDocument.getArray("b").getLong(0));
+		setBlockKey(aDocument.getArray("k").toInts());
+		setChecksum(aDocument.getArray("d").toLongs());
+		return this;
+	}
 
 
-//	public BlockPointer unmarshalDoc(Document aDocument)
-//	{
-//		Array array = aDocument.getArray("");
-//		setBlockType(BlockType.values()[array.getInt(0)]);
-//		setBlockLevel(array.getInt(1));
-//		setCompressionAlgorithm(array.getInt(2));
-//		setAllocatedSize(array.getInt(3));
-//		setLogicalSize(array.getInt(4));
-//		setPhysicalSize(array.getInt(5));
-//		setTransactionId(array.getInt(6));
-//		setBlockIndex0(array.getArray(7).getLong(0));
-//		setBlockKey(array.getArray(8).toLongs());
-//		setChecksum(array.getArray(9).toLongs());
-//		return this;
-//	}
-//
-//
-//	public Document marshalDoc()
-//	{
-//		Document doc = new Document()
-//			.putArray("", Array.of(
-//				getBlockType().ordinal(),
-//				getBlockLevel(),
-//				getCompressionAlgorithm(),
-//				getAllocatedSize(),
-//				getLogicalSize(),
-//				getPhysicalSize(),
-//				getTransactionId(),
-//				Array.of(getBlockIndex0()),
-//				Array.of(getBlockKey(new long[4])),
-//				Array.of(getChecksum(new long[4]))
-//			));
-//
-//		Log.hexDump(doc.marshal());
-//
-//		return doc;
-//	}
+	public Document marshalDoc2()
+	{
+		Document doc = new Document()
+			.put("typ", getBlockType())
+			.put("lvl", getBlockLevel())
+			.put("cmp", getCompressionAlgorithm())
+			.put("siz", Array.of(getAllocatedSize(), getLogicalSize(), getPhysicalSize()))
+			.put("blk", Array.of(getBlockIndex0(), getBlockIndex1(), getBlockIndex2()))
+			.put("key", Array.of(getBlockKey()))
+			.put("chk", Array.of(getChecksum()))
+			.put("tx", getTransactionId())
+			;
+
+		return doc;
+	}
 
 
 	@Override

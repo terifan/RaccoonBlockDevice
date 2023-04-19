@@ -6,15 +6,16 @@ import org.terifan.raccoon.blockdevice.compressor.ByteBlockOutputStream;
 import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.secure.BlockKeyGenerator;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.security.messagedigest.MurmurHash3;
+import org.terifan.security.random.ISAAC;
 
 
 public class BlockAccessor implements AutoCloseable
 {
+	private final static ISAAC PRNG = new ISAAC();
 	private final ManagedBlockDevice mBlockDevice;
-	private boolean mCloseUnderlyingDevice;
+	private final boolean mCloseUnderlyingDevice;
 
 
 	public BlockAccessor(ManagedBlockDevice aBlockDevice, boolean aCloseUnderlyingDevice)
@@ -69,20 +70,27 @@ public class BlockAccessor implements AutoCloseable
 
 			byte[] buffer = new byte[aBlockPointer.getAllocatedSize()];
 
-			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey(new int[8]));
+			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey());
 
-			long[] hash = MurmurHash3.hash256(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getTransactionId());
+			long[] hash;
+			if (aBlockPointer.getChecksumAlgorithm() == 0)
+			{
+				hash = MurmurHash3.hash256(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getTransactionId());
+			}
+			else
+			{
+				throw new IOException("Unsupported checksum algorithm");
+			}
 
 			if (!aBlockPointer.verifyChecksum(hash))
 			{
 				throw new IOException("Checksum error in block " + aBlockPointer);
 			}
 
-			Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].instance();
-
-			if (compressor != null)
+			if (aBlockPointer.getCompressionAlgorithm() != CompressorLevel.NONE.ordinal())
 			{
 				byte[] tmp = new byte[aBlockPointer.getLogicalSize()];
+				Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].instance();
 				compressor.decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, tmp.length);
 				buffer = tmp;
 			}
@@ -111,20 +119,24 @@ public class BlockAccessor implements AutoCloseable
 
 		try
 		{
-			ByteBlockOutputStream compressedBlock = null;
-			boolean compressed = false;
+			int blockSize = mBlockDevice.getBlockSize();
+			byte[] compressedBlock = null;
 
 			if (aCompressorLevel != CompressorLevel.NONE)
 			{
-				compressedBlock = new ByteBlockOutputStream(mBlockDevice.getBlockSize());
-				compressed = aCompressorLevel.instance().compress(aBuffer, aOffset, aLength, compressedBlock);
+				ByteBlockOutputStream tmp = new ByteBlockOutputStream(blockSize);
+				if (aCompressorLevel.instance().compress(aBuffer, aOffset, aLength, tmp))
+				{
+					compressedBlock = tmp.getBuffer();
+					assert (compressedBlock.length % blockSize) == 0;
+				}
 			}
 
 			int physicalSize;
-			if (compressed && roundUp(compressedBlock.size()) < roundUp(aBuffer.length)) // use the compressed result only if we actual save one block or more
+			if (compressedBlock != null && compressedBlock.length <= roundUp(aBuffer.length) - blockSize) // use the compressed result only if we actual save one block or more
 			{
-				physicalSize = compressedBlock.size();
-				aBuffer = compressedBlock.getBuffer();
+				physicalSize = compressedBlock.length;
+				aBuffer = compressedBlock;
 			}
 			else
 			{
@@ -133,10 +145,9 @@ public class BlockAccessor implements AutoCloseable
 				aCompressorLevel = CompressorLevel.NONE;
 			}
 
-			assert aBuffer.length % mBlockDevice.getBlockSize() == 0;
+			assert aBuffer.length % blockSize == 0;
 
-			long blockIndex = mBlockDevice.allocBlock(aBuffer.length / mBlockDevice.getBlockSize());
-			int[] blockKey = BlockKeyGenerator.generate();
+			long blockIndex = mBlockDevice.allocBlock(aBuffer.length / blockSize);
 
 			blockPointer = new BlockPointer()
 				.setCompressionAlgorithm(aCompressorLevel.ordinal())
@@ -147,13 +158,13 @@ public class BlockAccessor implements AutoCloseable
 				.setBlockType(aBlockType)
 				.setChecksumAlgorithm((byte)0)
 				.setChecksum(MurmurHash3.hash256(aBuffer, 0, physicalSize, transactionId))
-				.setBlockKey(blockKey)
+				.setBlockKey(createBlockKey())
 				.setBlockIndex0(blockIndex);
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();
 
-			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockKey);
+			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, createBlockKey());
 
 //			assert collectStatistics(WRITE_BLOCK, aBuffer.length);
 
@@ -165,6 +176,17 @@ public class BlockAccessor implements AutoCloseable
 		{
 			throw new RaccoonIOException("Error writing block: " + blockPointer, e);
 		}
+	}
+
+
+	private static int[] createBlockKey()
+	{
+		return new int[]{
+			PRNG.nextInt(),
+			PRNG.nextInt(),
+			PRNG.nextInt(),
+			PRNG.nextInt()
+		};
 	}
 
 
