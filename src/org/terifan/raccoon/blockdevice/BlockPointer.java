@@ -289,12 +289,12 @@ public final class BlockPointer implements Serializable
 		setAllocatedSize(aArray.getInt(3));
 		setLogicalSize(aArray.getInt(4));
 		setPhysicalSize(aArray.getInt(5));
-		setTransactionId(aArray.getInt(6));
-		setBlockIndex0(aArray.getArray(7).getLong(0));
-		setBlockIndex1(aArray.getArray(7).getLong(1));
-		setBlockIndex2(aArray.getArray(7).getLong(2));
-		setBlockKey(aArray.getArray(8).toInts());
-		setChecksum(aArray.getArray(9).toLongs());
+		setBlockIndex0(aArray.getArray(6).getLong(0));
+		setBlockIndex1(aArray.getArray(6).getLong(1));
+		setBlockIndex2(aArray.getArray(6).getLong(2));
+		setBlockKey(aArray.getArray(7).toInts());
+		setChecksum(aArray.getArray(8).toLongs());
+		setTransactionId(aArray.getLong(9));
 		return this;
 	}
 
