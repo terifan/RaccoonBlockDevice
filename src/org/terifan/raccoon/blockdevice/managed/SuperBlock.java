@@ -13,11 +13,9 @@ import org.terifan.security.random.SecureRandom;
 class SuperBlock
 {
 	private final static byte FORMAT_VERSION = 1;
-	private final static int CHECKSUM_SIZE = 32;
-	private final static int IV_SIZE = 16; // same as in SecureBlockDevice
-//	private final static int HEADER_SIZE = 1 + 3 * 8 + 2;
-//	private final static int TOTAL_OVERHEAD = IV_SIZE + CHECKSUM_SIZE + HEADER_SIZE + BlockPointer.SIZE;
-	private final static int TOTAL_OVERHEAD = 256;
+	private final static int IV_SIZE = 16;
+	private final static int CHECKSUM_SIZE = 16;
+	private final static int OVERHEAD = 256; // = IV_SIZE + 1 + 8 + 8 + 8 + BlockPointer.SIZE + 2 + CHECKSUM_SIZE
 	private final static SecureRandom PRNG = new SecureRandom();
 
 	private int mFormatVersion;
@@ -57,9 +55,9 @@ class SuperBlock
 	}
 
 
-	public void incrementTransactionId()
+	public long nextTransactionId()
 	{
-		mTransactionId++;
+		return ++mTransactionId;
 	}
 
 
@@ -111,16 +109,19 @@ class SuperBlock
 		}
 		else
 		{
-			aBlockDevice.readBlock(aBlockIndex, buffer.array(), 0, buffer.capacity(), new int[4]);
+			aBlockDevice.readBlock(aBlockIndex, buffer.array(), 0, buffer.capacity(), null);
 		}
 
-		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
+		long[] hash = MurmurHash3.hash128(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
 
 		buffer.position(0);
 
-		if (buffer.readInt64() != hash[0] || buffer.readInt64() != hash[1] || buffer.readInt64() != hash[2] || buffer.readInt64() != hash[3])
+		for (long i : hash)
 		{
-			throw new DeviceException("Checksum error at block index " + aBlockIndex);
+			if (buffer.readInt64() != i)
+			{
+				throw new DeviceException("Checksum error at block index " + aBlockIndex);
+			}
 		}
 
 		unmarshal(buffer);
@@ -149,13 +150,13 @@ class SuperBlock
 			PRNG.nextBytes(buffer.array(), buffer.position(), buffer.remaining() - IV_SIZE);
 		}
 
-		long[] hash = MurmurHash3.hash256(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
+		long[] hash = MurmurHash3.hash128(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
 
 		buffer.position(0);
-		buffer.writeInt64(hash[0]);
-		buffer.writeInt64(hash[1]);
-		buffer.writeInt64(hash[2]);
-		buffer.writeInt64(hash[3]);
+		for (long i : hash)
+		{
+			buffer.writeInt64(i);
+		}
 
 		if (aBlockDevice instanceof SecureBlockDevice)
 		{
@@ -172,9 +173,9 @@ class SuperBlock
 	{
 		byte[] metadata = mMetadata.toByteArray();
 
-		if (TOTAL_OVERHEAD + metadata.length > aBuffer.capacity())
+		if (OVERHEAD + metadata.length > aBuffer.capacity())
 		{
-			throw new DeviceException("Application metadata exeeds maximum size: limit: " + (aBuffer.capacity() - TOTAL_OVERHEAD) + ", metadata: " + metadata.length);
+			throw new DeviceException("Application metadata exeeds maximum size: limit: " + (aBuffer.capacity() - OVERHEAD) + ", metadata: " + metadata.length);
 		}
 
 		aBuffer.writeInt8(mFormatVersion);

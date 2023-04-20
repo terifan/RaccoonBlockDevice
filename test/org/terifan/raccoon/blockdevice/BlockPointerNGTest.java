@@ -23,10 +23,8 @@ public class BlockPointerNGTest
 			.setBlockIndex2(0x6666666666666666L)
 			.setTransactionId(0x7777777777777777L)
 			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
-			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL,0xeeeeeeeeeeeeeeeeL,0xffffffffffffffffL})
+			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL})
 			;
-
-		Log.hexDump(bp.marshal(ByteArrayBuffer.alloc(BlockPointer.SIZE)).array(), 8);
 	}
 
 
@@ -36,25 +34,21 @@ public class BlockPointerNGTest
 		BlockPointer bp = new BlockPointer()
 			.setBlockType(BlockType.FREE)
 			.setBlockLevel((byte)1)
-			.setChecksumAlgorithm((byte)2)
-			.setCompressionAlgorithm((byte)3)
+			.setCompressionAlgorithm((byte)2)
+			.setChecksumAlgorithm((byte)3)
 			.setAllocatedSize(100)
-			.setLogicalSize(50)
+			.setLogicalSize(75)
 			.setPhysicalSize(50)
 			.setBlockIndex0(3421654)
 			.setBlockIndex1(0)
 			.setBlockIndex2(0)
 			.setTransactionId(3216)
 			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
-			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL,0xeeeeeeeeeeeeeeeeL,0xffffffffffffffffL})
+			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL})
 			;
 
 		System.out.println(bp.marshalDoc());
 		System.out.println(bp.marshalDoc().toByteArray().length);
 		Log.hexDump(bp.marshalDoc().toByteArray());
-
-		System.out.println(bp.marshalDoc2());
-		System.out.println(bp.marshalDoc2().toByteArray().length);
-		Log.hexDump(bp.marshalDoc2().toByteArray());
 	}
 }

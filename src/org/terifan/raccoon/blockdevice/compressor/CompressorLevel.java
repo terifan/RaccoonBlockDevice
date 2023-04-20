@@ -11,7 +11,7 @@ public enum CompressorLevel
 	DEFLATE_BEST;
 
 
-	public Compressor instance()
+	public Compressor newInstance()
 	{
 		switch (this)
 		{

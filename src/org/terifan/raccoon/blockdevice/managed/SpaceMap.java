@@ -70,6 +70,11 @@ class SpaceMap
 
 	public void free(long aBlockIndex, int aBlockCount)
 	{
+		if (aBlockIndex < 0 || aBlockIndex + aBlockCount > Integer.MAX_VALUE)
+		{
+			throw new IllegalArgumentException();
+		}
+
 		int blockIndex = (int)aBlockIndex;
 
 		for (int i = 0; i < aBlockCount; i++)
@@ -133,7 +138,7 @@ class SpaceMap
 		aSpaceMapBlockPointer.setLogicalSize(buffer.position());
 		aSpaceMapBlockPointer.setPhysicalSize(buffer.position());
 		aSpaceMapBlockPointer.setChecksumAlgorithm((byte)0); // not used
-		aSpaceMapBlockPointer.setChecksum(MurmurHash3.hash256(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getTransactionId()));
+		aSpaceMapBlockPointer.setChecksum(MurmurHash3.hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getTransactionId()));
 		aSpaceMapBlockPointer.setBlockKey(blockKey);
 
 		// Pad buffer to block size
@@ -174,7 +179,7 @@ class SpaceMap
 
 			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey());
 
-			long[] hash = MurmurHash3.hash256(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getTransactionId());
+			long[] hash = MurmurHash3.hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getTransactionId());
 
 			if (!blockPointer.verifyChecksum(hash))
 			{

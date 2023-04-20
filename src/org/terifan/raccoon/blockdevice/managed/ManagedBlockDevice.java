@@ -26,9 +26,9 @@ public class ManagedBlockDevice implements AutoCloseable
 		{
 			throw new IllegalArgumentException("aBlockDevice is null");
 		}
-		if (aBlockDevice.getBlockSize() < 512)
+		if (aBlockDevice.getBlockSize() < 512 || (aBlockDevice.getBlockSize() & (aBlockDevice.getBlockSize() - 1)) != 0)
 		{
-			throw new IllegalArgumentException("The block device must have 512 byte block size or larger.");
+			throw new IllegalArgumentException("The block size must be power of 2 and at least 512 bytes in length.");
 		}
 
 		mPhysBlockDevice = aBlockDevice;
@@ -160,18 +160,6 @@ public class ManagedBlockDevice implements AutoCloseable
 			mPhysBlockDevice = null;
 		}
 	}
-
-
-//	public void forceClose()
-//	{
-//		mSpaceMap.reset();
-//
-//		if (mPhysBlockDevice != null)
-//		{
-//			mPhysBlockDevice.forceClose();
-//			mPhysBlockDevice = null;
-//		}
-//	}
 
 
 	public int getBlockSize()
@@ -399,9 +387,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 	private void writeSuperBlock()
 	{
-		mSuperBlock.incrementTransactionId();
-
-		long pageIndex = mSuperBlock.getTransactionId() & 1L;
+		long pageIndex = mSuperBlock.nextTransactionId() & 1L;
 
 		Log.i("write super block %d", pageIndex);
 		Log.inc();
@@ -410,28 +396,6 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		Log.dec();
 	}
-
-
-//	@Override
-//	public String toString()
-//	{
-//		return mSpaceMap.getRangeMap().toString();
-//	}
-//
-//
-//	/**
-//	 * @return the space map layout as a String (ranges of free blocks). If the space map is fragmented this may be a long String.
-//	 */
-//	public String getSpaceMap()
-//	{
-//		return mSpaceMap.getRangeMap().toString();
-//	}
-//
-//
-//	public RangeMap getRangeMap()
-//	{
-//		return mSpaceMap.getRangeMap();
-//	}
 
 
 	/**

@@ -18,6 +18,13 @@ public class BlockAccessor implements AutoCloseable
 	private final boolean mCloseUnderlyingDevice;
 
 
+	public BlockAccessor(ManagedBlockDevice aBlockDevice)
+	{
+		mBlockDevice = aBlockDevice;
+		mCloseUnderlyingDevice = false;
+	}
+
+
 	public BlockAccessor(ManagedBlockDevice aBlockDevice, boolean aCloseUnderlyingDevice)
 	{
 		mBlockDevice = aBlockDevice;
@@ -75,7 +82,7 @@ public class BlockAccessor implements AutoCloseable
 			long[] hash;
 			if (aBlockPointer.getChecksumAlgorithm() == 0)
 			{
-				hash = MurmurHash3.hash256(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getTransactionId());
+				hash = MurmurHash3.hash128(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getTransactionId());
 			}
 			else
 			{
@@ -90,7 +97,7 @@ public class BlockAccessor implements AutoCloseable
 			if (aBlockPointer.getCompressionAlgorithm() != CompressorLevel.NONE.ordinal())
 			{
 				byte[] tmp = new byte[aBlockPointer.getLogicalSize()];
-				Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].instance();
+				Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].newInstance();
 				compressor.decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, tmp.length);
 				buffer = tmp;
 			}
@@ -112,9 +119,8 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
-	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aBlockType, CompressorLevel aCompressorLevel)
+	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aBlockType, int aBlockLevel, CompressorLevel aCompressorLevel)
 	{
-		long transactionId = getBlockDevice().getTransactionId();
 		BlockPointer blockPointer = null;
 
 		try
@@ -125,7 +131,7 @@ public class BlockAccessor implements AutoCloseable
 			if (aCompressorLevel != CompressorLevel.NONE)
 			{
 				ByteBlockOutputStream tmp = new ByteBlockOutputStream(blockSize);
-				if (aCompressorLevel.instance().compress(aBuffer, aOffset, aLength, tmp))
+				if (aCompressorLevel.newInstance().compress(aBuffer, aOffset, aLength, tmp))
 				{
 					compressedBlock = tmp.getBuffer();
 					assert (compressedBlock.length % blockSize) == 0;
@@ -150,21 +156,22 @@ public class BlockAccessor implements AutoCloseable
 			long blockIndex = mBlockDevice.allocBlock(aBuffer.length / blockSize);
 
 			blockPointer = new BlockPointer()
+				.setBlockType(aBlockType)
+				.setBlockLevel(aBlockLevel)
 				.setCompressionAlgorithm(aCompressorLevel.ordinal())
+				.setChecksumAlgorithm((byte)0)
 				.setAllocatedSize(aBuffer.length)
 				.setPhysicalSize(physicalSize)
 				.setLogicalSize(aLength)
-				.setTransactionId(transactionId)
-				.setBlockType(aBlockType)
-				.setChecksumAlgorithm((byte)0)
-				.setChecksum(MurmurHash3.hash256(aBuffer, 0, physicalSize, transactionId))
+				.setBlockIndex0(blockIndex)
 				.setBlockKey(createBlockKey())
-				.setBlockIndex0(blockIndex);
+				.setChecksum(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getTransactionId()))
+				.setTransactionId(mBlockDevice.getTransactionId());
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();
 
-			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, createBlockKey());
+			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockPointer.getBlockKey());
 
 //			assert collectStatistics(WRITE_BLOCK, aBuffer.length);
 

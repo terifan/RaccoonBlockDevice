@@ -1,6 +1,5 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,8 +40,8 @@ public class LobByteChannel implements SeekableByteChannel
 	private int mChunkIndex;
 	private BlockPointer mBlockPointer;
 	private byte[] mHeader;
-	private CompressorLevel mIndexCompressor;
-	private CompressorLevel mDataCompressor;
+	private CompressorLevel mInteriorBlockCompressor;
+	private CompressorLevel mLeafBlockCompressor;
 
 
 	public LobByteChannel(BlockAccessor aBlockAccessor, byte[] aHeader, LobOpenOption aOpenOption, Listener<LobByteChannel> aListener) throws IOException
@@ -51,8 +50,8 @@ public class LobByteChannel implements SeekableByteChannel
 		mCloseListener = aListener;
 		mBlockAccessor = aBlockAccessor;
 
-		mIndexCompressor = CompressorLevel.ZLE;
-		mDataCompressor = CompressorLevel.NONE;
+		mInteriorBlockCompressor = CompressorLevel.ZLE;
+		mLeafBlockCompressor = CompressorLevel.NONE;
 
 		if (aOpenOption == LobOpenOption.REPLACE && aHeader != null)
 		{
@@ -290,7 +289,7 @@ public class LobByteChannel implements SeekableByteChannel
 			Log.inc();
 
 			buf.position(HEADER_SIZE);
-			BlockPointer bp = mBlockAccessor.writeBlock(buf.array(), 0, buf.capacity(), BLOCKTYPE_INDEX, mIndexCompressor);
+			BlockPointer bp = mBlockAccessor.writeBlock(buf.array(), 0, buf.capacity(), BLOCKTYPE_INDEX, 0, mInteriorBlockCompressor);
 			bp.marshal(buf);
 			buf.trim();
 
@@ -353,7 +352,7 @@ public class LobByteChannel implements SeekableByteChannel
 				}
 				else
 				{
-					BlockPointer bp = mBlockAccessor.writeBlock(mBuffer, 0, len, BLOCKTYPE_DATA, mDataCompressor);
+					BlockPointer bp = mBlockAccessor.writeBlock(mBuffer, 0, len, BLOCKTYPE_DATA, 0, mLeafBlockCompressor);
 					mPendingBlockPointsers.put(mChunkIndex, bp);
 				}
 			}
