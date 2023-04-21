@@ -11,15 +11,15 @@ public final class ByteArrayBuffer
 	private final static boolean FORCE_FIXED = false;
 	private final static int NO_LIMIT = Integer.MAX_VALUE;
 
-	private final byte[] mReadBuffer = new byte[8];
+	private final byte[] READ_BUFFER = new byte[8];
 
 	private byte[] mBuffer;
 	private int mOffset;
 	private int mLimit;
 	private boolean mLocked;
-	private int mWriteBitsToGo;
-	private int mBitBuffer;
-	private int mReadBitCount;
+//	private int mWriteBitsToGo;
+//	private int mBitBuffer;
+//	private int mReadBitCount;
 
 
 	private ByteArrayBuffer()
@@ -39,8 +39,8 @@ public final class ByteArrayBuffer
 		instance.mBuffer = new byte[aInitialSize];
 		instance.mLocked = aLimitSize;
 		instance.mLimit = aLimitSize ? aInitialSize : NO_LIMIT;
-		instance.mBitBuffer = 0;
-		instance.mWriteBitsToGo = 8;
+//		instance.mBitBuffer = 0;
+//		instance.mWriteBitsToGo = 8;
 		return instance;
 	}
 
@@ -62,8 +62,8 @@ public final class ByteArrayBuffer
 		instance.mBuffer = aBuffer;
 		instance.mLocked = aLimitSize;
 		instance.mLimit = aLimitSize ? aBuffer.length : NO_LIMIT;
-		instance.mBitBuffer = 0;
-		instance.mWriteBitsToGo = 8;
+//		instance.mBitBuffer = 0;
+//		instance.mWriteBitsToGo = 8;
 
 		return instance;
 	}
@@ -115,7 +115,16 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer skip(int aLength)
 	{
-		flushBits();
+//		flushBits();
+		mOffset += aLength;
+		return this;
+	}
+
+
+	public ByteArrayBuffer clear(int aLength)
+	{
+//		flushBits();
+		Arrays.fill(mBuffer, mOffset, mOffset + aLength, (byte)0);
 		mOffset += aLength;
 		return this;
 	}
@@ -169,8 +178,7 @@ public final class ByteArrayBuffer
 
 	public byte[] array()
 	{
-		flushBits();
-
+//		flushBits();
 		return mBuffer;
 	}
 
@@ -327,6 +335,19 @@ public final class ByteArrayBuffer
 	}
 
 
+	public ByteArrayBuffer transfer(ByteArrayBuffer aDestination, int aLength)
+	{
+		aDestination.ensureCapacity(aLength);
+
+		System.arraycopy(mBuffer, mOffset, aDestination.mBuffer, aDestination.mOffset, aLength);
+
+		mOffset += aLength;
+		aDestination.mOffset += aLength;
+
+		return this;
+	}
+
+
 	public int readInt16()
 	{
 		int ch1 = readInt8();
@@ -386,12 +407,12 @@ public final class ByteArrayBuffer
 
 	public long readInt40()
 	{
-		read(mReadBuffer, 0, 5);
-		return ((long)(mReadBuffer[0] & 255) << 32)
-			+ ((long)(mReadBuffer[1] & 255) << 24)
-			+ ((mReadBuffer[2] & 255) << 16)
-			+ ((mReadBuffer[3] & 255) << 8)
-			+ (mReadBuffer[4] & 255);
+		read(READ_BUFFER, 0, 5);
+		return ((long)(READ_BUFFER[0] & 255) << 32)
+			+ ((long)(READ_BUFFER[1] & 255) << 24)
+			+ ((READ_BUFFER[2] & 255) << 16)
+			+ ((READ_BUFFER[3] & 255) << 8)
+			+ (READ_BUFFER[4] & 255);
 	}
 
 
@@ -409,15 +430,15 @@ public final class ByteArrayBuffer
 
 	public long readInt64()
 	{
-		read(mReadBuffer, 0, 8);
-		return (((long)mReadBuffer[0] << 56)
-			+ ((long)(mReadBuffer[1] & 255) << 48)
-			+ ((long)(mReadBuffer[2] & 255) << 40)
-			+ ((long)(mReadBuffer[3] & 255) << 32)
-			+ ((long)(mReadBuffer[4] & 255) << 24)
-			+ ((mReadBuffer[5] & 255) << 16)
-			+ ((mReadBuffer[6] & 255) << 8)
-			+ (mReadBuffer[7] & 255));
+		read(READ_BUFFER, 0, 8);
+		return (((long)READ_BUFFER[0] << 56)
+			+ ((long)(READ_BUFFER[1] & 255) << 48)
+			+ ((long)(READ_BUFFER[2] & 255) << 40)
+			+ ((long)(READ_BUFFER[3] & 255) << 32)
+			+ ((long)(READ_BUFFER[4] & 255) << 24)
+			+ ((READ_BUFFER[5] & 255) << 16)
+			+ ((READ_BUFFER[6] & 255) << 8)
+			+ (READ_BUFFER[7] & 255));
 	}
 
 
@@ -518,110 +539,110 @@ public final class ByteArrayBuffer
 	}
 
 
-	public int readBit()
-	{
-		if (mReadBitCount == 0)
-		{
-			mBitBuffer = readInt8();
-
-			mReadBitCount = 8;
-		}
-
-		mReadBitCount--;
-		int output = 1 & (mBitBuffer >> mReadBitCount);
-		mBitBuffer &= (1L << mReadBitCount) - 1;
-
-		return output;
-	}
-
-
-	public ByteArrayBuffer writeBit(boolean aBit)
-	{
-		return writeBit(aBit ? 1 : 0);
-	}
-
-
-	public ByteArrayBuffer writeBit(int aBit)
-	{
-		mBitBuffer |= aBit << --mWriteBitsToGo;
-
-		if (mWriteBitsToGo == 0)
-		{
-			ensureCapacity(1);
-			mBuffer[mOffset++] = (byte)mBitBuffer;
-			mBitBuffer = 0;
-			mWriteBitsToGo = 8;
-		}
-
-		return this;
-	}
-
-
-	public int readBits(int aCount)
-	{
-		assert aCount <= 24;
-
-		int output = 0;
-
-		while (aCount > mReadBitCount)
-		{
-			aCount -= mReadBitCount;
-			output |= mBitBuffer << aCount;
-			mBitBuffer = readInt8();
-			mReadBitCount = 8;
-
-			if (mBitBuffer == -1)
-			{
-				mReadBitCount = 0;
-				throw new EOFException("Premature end of stream");
-			}
-		}
-
-		if (aCount > 0)
-		{
-			mReadBitCount -= aCount;
-			output |= mBitBuffer >> mReadBitCount;
-			mBitBuffer &= (1 << mReadBitCount) - 1;
-		}
-
-		return output;
-	}
-
-
-	public ByteArrayBuffer writeBits(int aValue, int aLength)
-	{
-		while (aLength-- > 0)
-		{
-			writeBit((aValue >>> aLength) & 1);
-		}
-
-		return this;
-	}
-
-
-	public void align()
-	{
-		if (mWriteBitsToGo < 8)
-		{
-			ensureCapacity(1);
-			mBuffer[mOffset] = (byte)mBitBuffer;
-			mOffset++;
-		}
-
-		mBitBuffer = 0;
-		mWriteBitsToGo = 8;
-		mReadBitCount = 0;
-	}
-
-
-	private void flushBits()
-	{
-		if (mWriteBitsToGo != 8)
-		{
-			ensureCapacity(1);
-			mBuffer[mOffset] = (byte)mBitBuffer;
-		}
-	}
+//	public int readBit()
+//	{
+//		if (mReadBitCount == 0)
+//		{
+//			mBitBuffer = readInt8();
+//
+//			mReadBitCount = 8;
+//		}
+//
+//		mReadBitCount--;
+//		int output = 1 & (mBitBuffer >> mReadBitCount);
+//		mBitBuffer &= (1L << mReadBitCount) - 1;
+//
+//		return output;
+//	}
+//
+//
+//	public ByteArrayBuffer writeBit(boolean aBit)
+//	{
+//		return writeBit(aBit ? 1 : 0);
+//	}
+//
+//
+//	public ByteArrayBuffer writeBit(int aBit)
+//	{
+//		mBitBuffer |= aBit << --mWriteBitsToGo;
+//
+//		if (mWriteBitsToGo == 0)
+//		{
+//			ensureCapacity(1);
+//			mBuffer[mOffset++] = (byte)mBitBuffer;
+//			mBitBuffer = 0;
+//			mWriteBitsToGo = 8;
+//		}
+//
+//		return this;
+//	}
+//
+//
+//	public int readBits(int aCount)
+//	{
+//		assert aCount <= 24;
+//
+//		int output = 0;
+//
+//		while (aCount > mReadBitCount)
+//		{
+//			aCount -= mReadBitCount;
+//			output |= mBitBuffer << aCount;
+//			mBitBuffer = readInt8();
+//			mReadBitCount = 8;
+//
+//			if (mBitBuffer == -1)
+//			{
+//				mReadBitCount = 0;
+//				throw new EOFException("Premature end of stream");
+//			}
+//		}
+//
+//		if (aCount > 0)
+//		{
+//			mReadBitCount -= aCount;
+//			output |= mBitBuffer >> mReadBitCount;
+//			mBitBuffer &= (1 << mReadBitCount) - 1;
+//		}
+//
+//		return output;
+//	}
+//
+//
+//	public ByteArrayBuffer writeBits(int aValue, int aLength)
+//	{
+//		while (aLength-- > 0)
+//		{
+//			writeBit((aValue >>> aLength) & 1);
+//		}
+//
+//		return this;
+//	}
+//
+//
+//	public void align()
+//	{
+//		if (mWriteBitsToGo < 8)
+//		{
+//			ensureCapacity(1);
+//			mBuffer[mOffset] = (byte)mBitBuffer;
+//			mOffset++;
+//		}
+//
+//		mBitBuffer = 0;
+//		mWriteBitsToGo = 8;
+//		mReadBitCount = 0;
+//	}
+//
+//
+//	private void flushBits()
+//	{
+//		if (mWriteBitsToGo != 8)
+//		{
+//			ensureCapacity(1);
+//			mBuffer[mOffset] = (byte)mBitBuffer;
+//		}
+//	}
 
 
 	private static int encodeZigZag32(final int n)

@@ -99,69 +99,69 @@ public class ByteArrayBufferNGTest
 	}
 
 
-	@Test
-	public void testBitBuffering1() throws IOException
-	{
-		ByteArrayBuffer out = ByteArrayBuffer.alloc(10);
-		out.writeBit(1);
-		out.writeBits(0b1010101, 7);
-		out.writeBits(0b1001, 4);
-		out.writeBits(0b111101, 6);
-
-		byte[] buf = out.array();
-
-		assertEquals(0xff & buf[0], 0b11010101);
-		assertEquals(0xff & buf[1], 0b10011111);
-		assertEquals(0xff & buf[2], 0b01000000);
-
-		ByteArrayBuffer in = ByteArrayBuffer.wrap(buf);
-		assertEquals(in.readBit(), 1);
-		assertEquals(in.readBits(7), 0b1010101);
-		assertEquals(in.readBits(4), 0b1001);
-		assertEquals(in.readBits(6), 0b111101);
-	}
-
-
-	@Test
-	public void testBitBuffering2() throws IOException
-	{
-		ByteArrayBuffer out = ByteArrayBuffer.alloc(4);
-		out.writeBit(1);
-		out.writeBit(0);
-		out.writeBit(1);
-		out.writeBit(1);
-		out.align();
-		out.writeInt8(0b10101010);
-
-		byte[] buf = out.array();
-
-		assertEquals(buf, new byte[]{(byte)0b10110000, (byte)0b10101010, 0,0});
-
-		ByteArrayBuffer in = ByteArrayBuffer.wrap(buf);
-		assertEquals(in.readBits(4), 0b1011);
-		out.align();
-		assertEquals(in.readInt8(), 0b10101010);
-	}
-
-
-	@Test
-	public void testBitBuffering3() throws IOException
-	{
-		ByteArrayBuffer out = ByteArrayBuffer.alloc(4);
-		out.writeBit(1);
-		out.align();
-		out.writeInt8(0b10101010);
-		out.position(1);
-		out.writeBit(1);
-		out.align();
-		out.writeInt8(0b10101010);
-
-		out.position(0);
-		assertEquals(out.readBit(), 1);
-		out.align();
-		out.position(1);
-		assertEquals(out.readBit(), 1);
-		out.align();
-		assertEquals(out.readInt8(), 0b10101010);
-	}
+//	@Test
+//	public void testBitBuffering1() throws IOException
+//	{
+//		ByteArrayBuffer out = ByteArrayBuffer.alloc(10);
+//		out.writeBit(1);
+//		out.writeBits(0b1010101, 7);
+//		out.writeBits(0b1001, 4);
+//		out.writeBits(0b111101, 6);
+//
+//		byte[] buf = out.array();
+//
+//		assertEquals(0xff & buf[0], 0b11010101);
+//		assertEquals(0xff & buf[1], 0b10011111);
+//		assertEquals(0xff & buf[2], 0b01000000);
+//
+//		ByteArrayBuffer in = ByteArrayBuffer.wrap(buf);
+//		assertEquals(in.readBit(), 1);
+//		assertEquals(in.readBits(7), 0b1010101);
+//		assertEquals(in.readBits(4), 0b1001);
+//		assertEquals(in.readBits(6), 0b111101);
+//	}
+//
+//
+//	@Test
+//	public void testBitBuffering2() throws IOException
+//	{
+//		ByteArrayBuffer out = ByteArrayBuffer.alloc(4);
+//		out.writeBit(1);
+//		out.writeBit(0);
+//		out.writeBit(1);
+//		out.writeBit(1);
+//		out.align();
+//		out.writeInt8(0b10101010);
+//
+//		byte[] buf = out.array();
+//
+//		assertEquals(buf, new byte[]{(byte)0b10110000, (byte)0b10101010, 0,0});
+//
+//		ByteArrayBuffer in = ByteArrayBuffer.wrap(buf);
+//		assertEquals(in.readBits(4), 0b1011);
+//		out.align();
+//		assertEquals(in.readInt8(), 0b10101010);
+//	}
+//
+//
+//	@Test
+//	public void testBitBuffering3() throws IOException
+//	{
+//		ByteArrayBuffer out = ByteArrayBuffer.alloc(4);
+//		out.writeBit(1);
+//		out.align();
+//		out.writeInt8(0b10101010);
+//		out.position(1);
+//		out.writeBit(1);
+//		out.align();
+//		out.writeInt8(0b10101010);
+//
+//		out.position(0);
+//		assertEquals(out.readBit(), 1);
+//		out.align();
+//		out.position(1);
+//		assertEquals(out.readBit(), 1);
+//		out.align();
+//		assertEquals(out.readInt8(), 0b10101010);
+//	}
 }

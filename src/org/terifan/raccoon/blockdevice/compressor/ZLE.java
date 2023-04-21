@@ -53,27 +53,30 @@ public class ZLE implements Compressor
 		}
 	}
 
+	// bug:
+	// decompressing 4096 compressed bytes to 4200 bytes
 
 	@Override
 	public void decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength) throws IOException
 	{
-		ByteArrayBuffer buffer = ByteArrayBuffer.wrap(aInput).position(aInputOffset);
+		ByteArrayBuffer input = ByteArrayBuffer.wrap(aInput).position(aInputOffset);
+		ByteArrayBuffer output = ByteArrayBuffer.wrap(aOutput).position(aOutputOffset);
 
-		for (int position = 0; buffer.position() < aInputOffset + aInputLength;)
+		for (int remaining = aOutputLength; remaining > 0;)
 		{
-			int len = buffer.readVar32();
+			int len = input.readVar32();
 
 			if (len > 0)
 			{
-				Arrays.fill(aOutput, aOutputOffset + position, aOutputOffset + position + len, (byte)0);
+				output.clear(len);
 			}
 			else
 			{
 				len = - (len - 1);
-				buffer.read(aOutput, aOutputOffset + position, len);
+				input.transfer(output, len);
 			}
 
-			position += len;
+			remaining -= len;
 		}
 	}
 }

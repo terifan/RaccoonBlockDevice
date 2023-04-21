@@ -98,7 +98,7 @@ public class BlockAccessor implements AutoCloseable
 			{
 				byte[] tmp = new byte[aBlockPointer.getLogicalSize()];
 				Compressor compressor = CompressorLevel.values()[aBlockPointer.getCompressionAlgorithm()].newInstance();
-				compressor.decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, tmp.length);
+				compressor.decompress(buffer, 0, aBlockPointer.getPhysicalSize(), tmp, 0, aBlockPointer.getLogicalSize());
 				buffer = tmp;
 			}
 			else if (aBlockPointer.getLogicalSize() < buffer.length)
