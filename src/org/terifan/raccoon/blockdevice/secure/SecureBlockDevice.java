@@ -4,9 +4,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import org.terifan.raccoon.blockdevice.physical.FileAlreadyOpenException;
-import org.terifan.security.cryptography.BlockCipher;
-import org.terifan.security.messagedigest.MurmurHash3;
-import org.terifan.security.cryptography.SecretKey;
+import org.terifan.raccoon.security.cryptography.BlockCipher;
+import org.terifan.raccoon.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.security.cryptography.SecretKey;
 import static java.util.Arrays.fill;
 import java.util.Random;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getBytes;
@@ -15,7 +15,7 @@ import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.security.cryptography.ciphermode.CipherMode;
+import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 
 

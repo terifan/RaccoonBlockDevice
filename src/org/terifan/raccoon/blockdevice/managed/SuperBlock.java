@@ -5,9 +5,9 @@ import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
-import org.terifan.security.random.SecureRandom;
+import org.terifan.raccoon.security.random.SecureRandom;
 
 
 class SuperBlock

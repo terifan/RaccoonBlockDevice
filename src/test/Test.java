@@ -8,7 +8,7 @@ import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.document.Document;
-import org.terifan.security.random.SecureRandom;
+import org.terifan.raccoon.security.random.SecureRandom;
 
 
 public class Test

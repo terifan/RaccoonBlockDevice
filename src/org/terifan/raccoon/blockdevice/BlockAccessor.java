@@ -7,8 +7,8 @@ import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.security.messagedigest.MurmurHash3;
-import org.terifan.security.random.ISAAC;
+import org.terifan.raccoon.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.security.random.ISAAC;
 
 
 public class BlockAccessor implements AutoCloseable

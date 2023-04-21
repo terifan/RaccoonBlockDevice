@@ -1,7 +1,7 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import org.terifan.security.messagedigest.SCrypt;
-import org.terifan.security.messagedigest.HMAC;
+import org.terifan.raccoon.security.messagedigest.SCrypt;
+import org.terifan.raccoon.security.messagedigest.HMAC;
 
 
 public final class AccessCredentials

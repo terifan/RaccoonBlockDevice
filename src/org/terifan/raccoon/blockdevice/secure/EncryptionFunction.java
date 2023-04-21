@@ -1,10 +1,10 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import org.terifan.security.cryptography.AES;
-import org.terifan.security.cryptography.BlockCipher;
-import org.terifan.security.cryptography.Kuznechik;
-import org.terifan.security.cryptography.Serpent;
-import org.terifan.security.cryptography.Twofish;
+import org.terifan.raccoon.security.cryptography.AES;
+import org.terifan.raccoon.security.cryptography.BlockCipher;
+import org.terifan.raccoon.security.cryptography.Kuznechik;
+import org.terifan.raccoon.security.cryptography.Serpent;
+import org.terifan.raccoon.security.cryptography.Twofish;
 
 
 public enum EncryptionFunction

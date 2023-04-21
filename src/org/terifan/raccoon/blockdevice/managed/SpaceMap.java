@@ -7,9 +7,9 @@ import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
-import org.terifan.security.messagedigest.MurmurHash3;
+import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
-import org.terifan.security.random.SecureRandom;
+import org.terifan.raccoon.security.random.SecureRandom;
 
 
 class SpaceMap
