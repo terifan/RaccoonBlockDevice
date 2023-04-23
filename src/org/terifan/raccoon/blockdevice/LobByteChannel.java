@@ -18,7 +18,7 @@ public class LobByteChannel implements SeekableByteChannel
 {
 	private final static boolean LOG = false;
 
-	private final static int MAX_BLOCK_SIZE = 1024 * 1024;
+	private final static int MAX_BLOCK_SIZE = 1 << 20; // power of 2
 	private final static int HEADER_SIZE = 8;
 	private final static int INDIRECT_POINTER_THRESHOLD = 4;
 	private final static int BLOCKTYPE_DATA = 0;
@@ -107,7 +107,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 		if (LOG) System.out.println("READ  " + mPosition + " +" + total);
 
-		int posInChunk = (int)(mPosition % MAX_BLOCK_SIZE);
+		int posInChunk = posInChunk();
 
 		for (int remaining = total; remaining > 0; )
 		{
@@ -140,7 +140,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 		if (LOG) System.out.println("WRITE " + mPosition + " +" + total);
 
-		int posInChunk = (int)(mPosition % MAX_BLOCK_SIZE);
+		int posInChunk = posInChunk();
 
 		for (int remaining = total; remaining > 0;)
 		{
@@ -329,9 +329,9 @@ public class LobByteChannel implements SeekableByteChannel
 
 	private void sync(boolean aFinal) throws IOException
 	{
-		if (LOG) System.out.println("\tsync pos: " + mPosition + ", size: " + mTotalSize + ", final: " + aFinal + ", posChunk: " + (mPosition % MAX_BLOCK_SIZE) + ", indexChunk:" + mPosition / MAX_BLOCK_SIZE + ", mod: " + mChunkModified);
+		if (LOG) System.out.println("\tsync pos: " + mPosition + ", size: " + mTotalSize + ", final: " + aFinal + ", posChunk: " + posInChunk() + ", indexChunk:" + mPosition / MAX_BLOCK_SIZE + ", mod: " + mChunkModified);
 
-		if ((mPosition % MAX_BLOCK_SIZE) == 0 || mPosition / MAX_BLOCK_SIZE != mChunkIndex || aFinal)
+		if (posInChunk() == 0 || mPosition / MAX_BLOCK_SIZE != mChunkIndex || aFinal)
 		{
 			if (mChunkModified)
 			{
@@ -602,6 +602,12 @@ public class LobByteChannel implements SeekableByteChannel
 	public boolean isModified()
 	{
 		return mModified;
+	}
+
+
+	private int posInChunk()
+	{
+		return (int)(mPosition & (MAX_BLOCK_SIZE - 1));
 	}
 
 
