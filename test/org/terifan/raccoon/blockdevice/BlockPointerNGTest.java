@@ -1,6 +1,5 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.testng.annotations.Test;
 
@@ -21,9 +20,9 @@ public class BlockPointerNGTest
 			.setBlockIndex0(0x4444444444444444L)
 			.setBlockIndex1(0x5555555555555555L)
 			.setBlockIndex2(0x6666666666666666L)
-			.setTransactionId(0x7777777777777777L)
+			.setGeneration(0x7777777777777777L)
 			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
-			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL})
+			.setChecksum(new int[]{0xcccccccc,0xcccccccc,0xdddddddd,0xdddddddd})
 			;
 	}
 
@@ -42,9 +41,9 @@ public class BlockPointerNGTest
 			.setBlockIndex0(3421654)
 			.setBlockIndex1(0)
 			.setBlockIndex2(0)
-			.setTransactionId(3216)
+			.setGeneration(3216)
 			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
-			.setChecksum(new long[]{0xccccccccccccccccL,0xddddddddddddddddL})
+			.setChecksum(new int[]{0xcccccccc,0xcccccccc,0xdddddddd,0xdddddddd})
 			;
 
 		System.out.println(bp.marshalDoc());

@@ -1,200 +1,163 @@
 package org.terifan.raccoon.blockdevice.managed;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.security.DigestException;
+import java.util.Arrays;
 import org.terifan.raccoon.document.Document;
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
-import org.terifan.raccoon.security.random.SecureRandom;
+import org.terifan.raccoon.document.Marshaller;
+import org.terifan.raccoon.security.messagedigest.SHA3;
 
 
 /*
- *    16  IV
- *     2  Format version
+ *     8  Generation
  *     8  Created date/time
  *     8  Changed date/time
- *    16  Transaction counter
- *   128  SpaceMap BlockPointer
- *  3838  Metadata
- *    32  Checksum
+ *     x  SpaceMap BlockPointer
+ *  3000  Metadata
+ *    64  Checksum
  */
 class SuperBlock
 {
-	private final static byte FORMAT_VERSION = 1;
-	private final static int IV_SIZE = 16;
-	private final static int CHECKSUM_SIZE = 16;
-	private final static int OVERHEAD = 205; // = IV_SIZE + 1 + 8 + 8 + 8 + BlockPointer.SIZE + 2 + CHECKSUM_SIZE
-	private final static SecureRandom PRNG = new SecureRandom();
+	private final static int BLOCK_SIZE = 4096;
 
-	private int mFormatVersion;
+	private long mGeneration;
 	private long mCreateTime;
-	private long mModifiedTime;
-	private long mTransactionId;
-	private BlockPointer mSpaceMapPointer;
+	private long mChangedTime;
+	private BlockPointer mSpaceMapBlockPointer;
 
 
-	public SuperBlock(long aTransactionId)
+	public SuperBlock(long aWriteCounter)
 	{
-		mFormatVersion = FORMAT_VERSION;
 		mCreateTime = System.currentTimeMillis();
-		mSpaceMapPointer = new BlockPointer();
-		mTransactionId = aTransactionId;
+		mSpaceMapBlockPointer = new BlockPointer();
+		mGeneration = aWriteCounter;
 	}
 
 
 	public BlockPointer getSpaceMapPointer()
 	{
-		return mSpaceMapPointer;
+		return mSpaceMapBlockPointer;
 	}
 
 
-	public long getTransactionId()
+	public long getGeneration()
 	{
-		return mTransactionId;
+		return mGeneration;
 	}
 
 
-	public long nextTransactionId()
+	public long incrementGeneration()
 	{
-		return ++mTransactionId;
+		return ++mGeneration;
 	}
 
 
-	public int getFormatVersion()
-	{
-		return mFormatVersion;
-	}
-
-
-	public long getCreateTime()
+	public long getCreatedTime()
 	{
 		return mCreateTime;
 	}
 
 
-	public void setCreateTime(long aCreateTime)
+	public long getChangedTime()
 	{
-		mCreateTime = aCreateTime;
+		return mChangedTime;
 	}
 
 
-	public long getModifiedTime()
+	public Document read(PhysicalBlockDevice aBlockDevice, long aBlockIndex) throws IOException
 	{
-		return mModifiedTime;
-	}
+		byte[] buffer = new byte[aBlockDevice.getBlockSize()];
 
-
-	public void setModifiedTime(long aModifiedTime)
-	{
-		mModifiedTime = aModifiedTime;
-	}
-
-
-	public Document read(PhysicalBlockDevice aBlockDevice, long aBlockIndex)
-	{
-		int blockSize = aBlockDevice.getBlockSize();
-
-		ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockSize, true);
-
-		if (aBlockDevice instanceof SecureBlockDevice)
+		int[] blockKey = new int[]
 		{
-			((SecureBlockDevice)aBlockDevice).readBlockWithIV(aBlockIndex, buffer.array(), 0, blockSize);
-		}
-		else
+			0, 0, 0, (int)aBlockIndex
+		};
+
+		aBlockDevice.readBlock(aBlockIndex, buffer, 0, buffer.length, blockKey);
+
+		SHA3 sha = new SHA3(512);
+		sha.update(buffer, 0, buffer.length - sha.getDigestLength());
+
+		if (Arrays.equals(sha.digest(), Arrays.copyOfRange(buffer, buffer.length - sha.getDigestLength(), buffer.length)))
 		{
-			aBlockDevice.readBlock(aBlockIndex, buffer.array(), 0, buffer.capacity(), null);
-		}
-
-		long[] hash = MurmurHash3.hash128(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
-
-		buffer.position(0);
-
-		for (long i : hash)
-		{
-			if (buffer.readInt64() != i)
-			{
-				throw new DeviceException("Checksum error at block index " + aBlockIndex);
-			}
+			throw new DeviceException("Checksum error at block index " + aBlockIndex);
 		}
 
 		return unmarshal(buffer);
 	}
 
 
-	public void write(PhysicalBlockDevice aBlockDevice, long aBlockIndex, Document aMetadata)
+	public void write(PhysicalBlockDevice aBlockDevice, long aBlockIndex, Document aMetadata) throws IOException
 	{
 		if (aBlockIndex < 0)
 		{
 			throw new DeviceException("Block at illegal offset: " + aBlockIndex);
 		}
 
-		mModifiedTime = System.currentTimeMillis();
+		mChangedTime = System.currentTimeMillis();
 
-		int blockSize = aBlockDevice.getBlockSize();
+		byte[] buffer = marshal(aMetadata);
 
-		ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockSize, true);
-		buffer.position(CHECKSUM_SIZE); // reserve space for checksum
-
-		marshal(buffer, aMetadata);
-
-		if (aBlockDevice instanceof SecureBlockDevice)
+		try
 		{
-			PRNG.nextBytes(buffer.array(), buffer.position(), buffer.remaining() - IV_SIZE);
+			SHA3 sha = new SHA3(512);
+			sha.update(buffer, 0, buffer.length - sha.getDigestLength());
+			sha.digest(buffer, buffer.length - sha.getDigestLength(), sha.getDigestLength());
+		}
+		catch (DigestException e)
+		{
+			throw new IOException(e);
 		}
 
-		long[] hash = MurmurHash3.hash128(buffer.array(), CHECKSUM_SIZE, blockSize - CHECKSUM_SIZE - IV_SIZE, 0);
+		int[] blockKey = new int[]
+		{
+			0, 0, 0, (int)aBlockIndex
+		};
 
-		buffer.position(0);
-		for (long i : hash)
-		{
-			buffer.writeInt64(i);
-		}
-
-		if (aBlockDevice instanceof SecureBlockDevice)
-		{
-			((SecureBlockDevice)aBlockDevice).writeBlockWithIV(aBlockIndex, buffer.array(), 0, blockSize);
-		}
-		else
-		{
-			aBlockDevice.writeBlock(aBlockIndex, buffer.array(), 0, blockSize, new int[4]);
-		}
+		aBlockDevice.writeBlock(aBlockIndex, buffer, 0, buffer.length, blockKey);
 	}
 
 
-	private void marshal(ByteArrayBuffer aBuffer, Document aMetadata)
+	private byte[] marshal(Document aMetadata) throws IOException
 	{
-		byte[] metadata = aMetadata.toByteArray();
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-		if (OVERHEAD + metadata.length > aBuffer.capacity())
+		try (Marshaller marshaller = new Marshaller(baos))
 		{
-			throw new DeviceException("Application metadata exeeds maximum size: limit: " + (aBuffer.capacity() - OVERHEAD) + ", metadata: " + metadata.length);
+			marshaller.write(mGeneration);
+			marshaller.write(mCreateTime);
+			marshaller.write(mChangedTime);
+			marshaller.write(mSpaceMapBlockPointer.marshalDoc());
+			marshaller.write(aMetadata);
 		}
 
-		aBuffer.writeInt8(mFormatVersion);
-		aBuffer.writeInt64(mCreateTime);
-		aBuffer.writeInt64(mModifiedTime);
-		aBuffer.writeInt64(mTransactionId);
-		mSpaceMapPointer.marshal(aBuffer);
-		aBuffer.writeInt16(metadata.length);
-		aBuffer.write(metadata);
+		if (baos.size() > BLOCK_SIZE)
+		{
+			throw new DeviceException("Fatal error: SuperBlock serialized too larger than one block: " + baos.size());
+		}
+
+		baos.write(new byte[BLOCK_SIZE - baos.size()]);
+
+		return baos.toByteArray();
 	}
 
 
-	private Document unmarshal(ByteArrayBuffer aBuffer)
+	private Document unmarshal(byte[] aBuffer) throws IOException
 	{
-		mFormatVersion = aBuffer.readInt8();
-
-		if (mFormatVersion != FORMAT_VERSION)
+		try (Marshaller marshaller = new Marshaller(new ByteArrayInputStream(aBuffer)))
 		{
-			throw new UnsupportedVersionException("Data format is not supported: was " + mFormatVersion + ", expected " + FORMAT_VERSION);
-		}
+			mGeneration = marshaller.read();
+			mCreateTime = marshaller.read();
+			mChangedTime = marshaller.read();
+			mSpaceMapBlockPointer.unmarshalDoc(marshaller.read());
+			Document metadata = marshaller.read();
 
-		mCreateTime = aBuffer.readInt64();
-		mModifiedTime = aBuffer.readInt64();
-		mTransactionId = aBuffer.readInt64();
-		mSpaceMapPointer.unmarshal(aBuffer);
-		return new Document().fromByteArray(aBuffer.read(new byte[aBuffer.readInt16()]));
+			return metadata;
+		}
 	}
 }

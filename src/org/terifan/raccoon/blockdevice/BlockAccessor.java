@@ -39,7 +39,7 @@ public class BlockAccessor implements AutoCloseable
 
 
 	@Override
-	public void close()
+	public void close() throws IOException
 	{
 		if (mCloseUnderlyingDevice)
 		{
@@ -79,10 +79,10 @@ public class BlockAccessor implements AutoCloseable
 
 			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey());
 
-			long[] hash;
+			int[] hash;
 			if (aBlockPointer.getChecksumAlgorithm() == 0)
 			{
-				hash = MurmurHash3.hash128(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getTransactionId());
+				hash = MurmurHash3.hash128(buffer, 0, aBlockPointer.getPhysicalSize(), aBlockPointer.getGeneration());
 			}
 			else
 			{
@@ -165,8 +165,8 @@ public class BlockAccessor implements AutoCloseable
 				.setLogicalSize(aLength)
 				.setBlockIndex0(blockIndex)
 				.setBlockKey(createBlockKey())
-				.setChecksum(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getTransactionId()))
-				.setTransactionId(mBlockDevice.getTransactionId());
+				.setChecksum(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getGeneration()))
+				.setGeneration(mBlockDevice.getGeneration());
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();

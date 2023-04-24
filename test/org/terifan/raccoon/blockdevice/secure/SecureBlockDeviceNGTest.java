@@ -1,10 +1,5 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import org.terifan.raccoon.blockdevice.secure.CipherModeFunction;
-import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
-import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
-import org.terifan.raccoon.blockdevice.secure.EncryptionFunction;
-import org.terifan.raccoon.blockdevice.secure.KeyGenerationFunction;
 import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
 import java.io.IOException;
 import java.util.Random;
@@ -18,7 +13,7 @@ public class SecureBlockDeviceNGTest
 	public void testLoadBootBlock() throws IOException
 	{
 		MemoryBlockDevice blockDevice = new MemoryBlockDevice(4096);
-		AccessCredentials accessCredentials = new AccessCredentials("password").setIterationCount(1);
+		AccessCredentials accessCredentials = new AccessCredentials("password");
 
 		try (SecureBlockDevice device = SecureBlockDevice.create(accessCredentials, blockDevice))
 		{

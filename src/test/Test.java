@@ -12,6 +12,7 @@ import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.LobHeader;
+import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.document.Array;
 
 
@@ -21,9 +22,9 @@ public class Test
 	{
 		try
 		{
-			Files.delete(Paths.get("d:\\test.dev"));
+			Files.deleteIfExists(Paths.get("d:\\test.dev"));
 
-			AccessCredentials ac = new AccessCredentials("test");
+			AccessCredentials ac = new AccessCredentials("password");
 			SecureRandom rnd = new SecureRandom();
 
 			byte[] directBlockData = new byte[4096 * 10];
@@ -32,8 +33,8 @@ public class Test
 			byte[] lobData = new byte[1024 * 1024 * 10];
 			rnd.nextBytes(lobData);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-//			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.create(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
+//			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.create(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -55,8 +56,8 @@ public class Test
 
 //			Log.setLevel(LogLevel.DEBUG);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-//			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.open(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
+//			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.open(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());

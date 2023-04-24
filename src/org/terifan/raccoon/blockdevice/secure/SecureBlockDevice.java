@@ -315,71 +315,71 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	}
 
 
-	public void writeBlockWithIV(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength)
-	{
-		// the buffer must end with 16 zero bytes reserved for the IV
-		assert getInt64(aBuffer, aBuffer.length - 16) == 0;
-		assert getInt64(aBuffer, aBuffer.length - 8) == 0;
-
-		if (aBlockIndex < 0)
-		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
-		}
-
-		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
-		Log.inc();
-
-		byte[] workBuffer = aBuffer.clone();
-
-		int[] iv = new int[4];
-		iv[0] = PRNG.nextInt();
-		iv[1] = PRNG.nextInt();
-		iv[2] = PRNG.nextInt();
-		iv[3] = PRNG.nextInt();
-
-		putInt32(workBuffer, workBuffer.length - 16, iv[0]);
-		putInt32(workBuffer, workBuffer.length - 12, iv[1]);
-		putInt32(workBuffer, workBuffer.length - 8, iv[2]);
-		putInt32(workBuffer, workBuffer.length - 4, iv[3]);
-
-		mCipherImplementation.encrypt(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength - 16, iv);
-
-		mCipherImplementation.mTweakCipher.engineEncryptBlock(workBuffer, workBuffer.length - 16, workBuffer, workBuffer.length - 16);
-
-		mBlockDevice.writeBlock(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
-
-		Log.dec();
-	}
-
-
-	public void readBlockWithIV(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength)
-	{
-		if (aBlockIndex < 0)
-		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
-		}
-
-		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
-		Log.inc();
-
-		mBlockDevice.readBlock(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
-
-		mCipherImplementation.mTweakCipher.engineDecryptBlock(aBuffer, aBuffer.length - 16, aBuffer, aBuffer.length - 16);
-
-		int[] iv =
-		{
-			getInt32(aBuffer, aBuffer.length - 16),
-			getInt32(aBuffer, aBuffer.length - 12),
-			getInt32(aBuffer, aBuffer.length - 8),
-			getInt32(aBuffer, aBuffer.length - 4)
-		};
-
-		mCipherImplementation.decrypt(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength - 16, iv);
-
-		Arrays.fill(aBuffer, aBuffer.length - 16, aBuffer.length, (byte)0);
-
-		Log.dec();
-	}
+//	public void writeBlockWithIV(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength)
+//	{
+//		// the buffer must end with 16 zero bytes reserved for the IV
+//		assert getInt64(aBuffer, aBuffer.length - 16) == 0;
+//		assert getInt64(aBuffer, aBuffer.length - 8) == 0;
+//
+//		if (aBlockIndex < 0)
+//		{
+//			throw new DeviceException("Illegal offset: " + aBlockIndex);
+//		}
+//
+//		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
+//		Log.inc();
+//
+//		byte[] workBuffer = aBuffer.clone();
+//
+//		int[] iv = new int[4];
+//		iv[0] = PRNG.nextInt();
+//		iv[1] = PRNG.nextInt();
+//		iv[2] = PRNG.nextInt();
+//		iv[3] = PRNG.nextInt();
+//
+//		putInt32(workBuffer, workBuffer.length - 16, iv[0]);
+//		putInt32(workBuffer, workBuffer.length - 12, iv[1]);
+//		putInt32(workBuffer, workBuffer.length - 8, iv[2]);
+//		putInt32(workBuffer, workBuffer.length - 4, iv[3]);
+//
+//		mCipherImplementation.encrypt(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength - 16, iv);
+//
+//		mCipherImplementation.mTweakCipher.engineEncryptBlock(workBuffer, workBuffer.length - 16, workBuffer, workBuffer.length - 16);
+//
+//		mBlockDevice.writeBlock(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
+//
+//		Log.dec();
+//	}
+//
+//
+//	public void readBlockWithIV(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength)
+//	{
+//		if (aBlockIndex < 0)
+//		{
+//			throw new DeviceException("Illegal offset: " + aBlockIndex);
+//		}
+//
+//		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
+//		Log.inc();
+//
+//		mBlockDevice.readBlock(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, new int[4]); // block key is used by this blockdevice and not passed to lower levels
+//
+//		mCipherImplementation.mTweakCipher.engineDecryptBlock(aBuffer, aBuffer.length - 16, aBuffer, aBuffer.length - 16);
+//
+//		int[] iv =
+//		{
+//			getInt32(aBuffer, aBuffer.length - 16),
+//			getInt32(aBuffer, aBuffer.length - 12),
+//			getInt32(aBuffer, aBuffer.length - 8),
+//			getInt32(aBuffer, aBuffer.length - 4)
+//		};
+//
+//		mCipherImplementation.decrypt(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength - 16, iv);
+//
+//		Arrays.fill(aBuffer, aBuffer.length - 16, aBuffer.length, (byte)0);
+//
+//		Log.dec();
+//	}
 
 
 	@Override
@@ -467,7 +467,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 
 	private static final class CipherImplementation
 	{
-		private transient final long[][] mMasterIV;
+		private transient final int[][] mMasterIV;
 		private transient final BlockCipher[] mCiphers;
 		private transient final CipherMode mCipherMode;
 		private transient final int mUnitSize;
@@ -480,7 +480,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 			mCipherMode = aCipherModeFunction.newInstance();
 			mCiphers = aEncryptionFunction.newInstance();
 			mTweakCipher = aEncryptionFunction.newTweakInstance();
-			mMasterIV = new long[mCiphers.length][2];
+			mMasterIV = new int[mCiphers.length][4];
 
 			int offset = aKeyPoolOffset;
 
@@ -500,8 +500,10 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 			{
 				if (i < mMasterIV.length)
 				{
-					mMasterIV[i][0] = getInt64(aKeyPool, offset + 0);
-					mMasterIV[i][1] = getInt64(aKeyPool, offset + 8);
+					mMasterIV[i][0] = getInt32(aKeyPool, offset + 0);
+					mMasterIV[i][1] = getInt32(aKeyPool, offset + 4);
+					mMasterIV[i][2] = getInt32(aKeyPool, offset + 8);
+					mMasterIV[i][3] = getInt32(aKeyPool, offset + 12);
 				}
 				offset += IV_SIZE;
 			}
@@ -513,10 +515,10 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 			int[] tmp = new int[4];
 			for (int i = 0; i < mCiphers.length; i++)
 			{
-				tmp[0] = (int)(mMasterIV[i][0] >>> 32) ^ aBlockIV[0];
-				tmp[1] = (int)(mMasterIV[i][0]       ) ^ aBlockIV[1];
-				tmp[2] = (int)(mMasterIV[i][0] >>> 32) ^ aBlockIV[2];
-				tmp[3] = (int)(mMasterIV[i][0]       ) ^ aBlockIV[3];
+				tmp[0] = mMasterIV[i][0] ^ aBlockIV[0];
+				tmp[1] = mMasterIV[i][1] ^ aBlockIV[1];
+				tmp[2] = mMasterIV[i][2] ^ aBlockIV[2];
+				tmp[3] = mMasterIV[i][3] ^ aBlockIV[3];
 				mCipherMode.encrypt(aBuffer, aOffset, aLength, mCiphers[i], aBlockIndex, Math.min(mUnitSize, aLength), tmp, mTweakCipher);
 			}
 		}
@@ -527,10 +529,10 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 			int[] tmp = new int[4];
 			for (int i = mCiphers.length; --i >= 0;)
 			{
-				tmp[0] = (int)(mMasterIV[i][0] >>> 32) ^ aBlockIV[0];
-				tmp[1] = (int)(mMasterIV[i][0]       ) ^ aBlockIV[1];
-				tmp[2] = (int)(mMasterIV[i][0] >>> 32) ^ aBlockIV[2];
-				tmp[3] = (int)(mMasterIV[i][0]       ) ^ aBlockIV[3];
+				tmp[0] = mMasterIV[i][0] ^ aBlockIV[0];
+				tmp[1] = mMasterIV[i][1] ^ aBlockIV[1];
+				tmp[2] = mMasterIV[i][2] ^ aBlockIV[2];
+				tmp[3] = mMasterIV[i][3] ^ aBlockIV[3];
 				mCipherMode.decrypt(aBuffer, aOffset, aLength, mCiphers[i], aBlockIndex, Math.min(mUnitSize, aLength), tmp, mTweakCipher);
 			}
 		}
@@ -546,9 +548,12 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 				}
 			}
 
-			for (int i = 0; i < mMasterIV.length; i++)
+			for (int[] masterIV : mMasterIV)
 			{
-				mMasterIV[i][0] = mMasterIV[i][1] = 0L;
+				for (int j = 0; j < masterIV.length; j++)
+				{
+					masterIV[j] = 0;
+				}
 			}
 
 			fill(mCiphers, null);

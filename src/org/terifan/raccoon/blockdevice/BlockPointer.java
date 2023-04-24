@@ -26,7 +26,7 @@ public final class BlockPointer implements Serializable
 	private final static int OFS_OFFSET0 = 16;			// 8	16..23
 	private final static int OFS_OFFSET1 = 24;			// 8	24..31
 	private final static int OFS_OFFSET2 = 32;			// 8	32..40
-	private final static int OFS_TRANSACTION = 40;		// 8	40..47
+	private final static int OFS_GENERATION = 40;		// 8	40..47
 	private final static int OFS_BLOCK_KEY = 48;		// 16	48..63
 	private final static int OFS_CHECKSUM = 64;			// 16	64..79
 
@@ -199,45 +199,51 @@ public final class BlockPointer implements Serializable
 	}
 
 
-	public long getTransactionId()
+	public long getGeneration()
 	{
-		return getInt64(mBuffer, OFS_TRANSACTION);
+		return getInt64(mBuffer, OFS_GENERATION);
 	}
 
 
-	public BlockPointer setTransactionId(long aTransactionId)
+	public BlockPointer setGeneration(long aGeneration)
 	{
-		putInt64(mBuffer, OFS_TRANSACTION, aTransactionId);
+		putInt64(mBuffer, OFS_GENERATION, aGeneration);
 		return this;
 	}
 
 
-	public long[] getChecksum()
+	public int[] getChecksum()
 	{
-		return new long[]
+		return new int[]
 		{
-			getInt64(mBuffer, OFS_CHECKSUM + 0),
-			getInt64(mBuffer, OFS_CHECKSUM + 8)
+			getInt32(mBuffer, OFS_CHECKSUM + 0),
+			getInt32(mBuffer, OFS_CHECKSUM + 4),
+			getInt32(mBuffer, OFS_CHECKSUM + 8),
+			getInt32(mBuffer, OFS_CHECKSUM + 12)
 		};
 	}
 
 
-	public BlockPointer setChecksum(long... aChecksum)
+	public BlockPointer setChecksum(int... aChecksum)
 	{
-		assert aChecksum.length == 2;
+		assert aChecksum.length == 4;
 
-		putInt64(mBuffer, OFS_CHECKSUM + 0, aChecksum[0]);
-		putInt64(mBuffer, OFS_CHECKSUM + 8, aChecksum[1]);
+		putInt32(mBuffer, OFS_CHECKSUM + 0, aChecksum[0]);
+		putInt32(mBuffer, OFS_CHECKSUM + 4, aChecksum[1]);
+		putInt32(mBuffer, OFS_CHECKSUM + 8, aChecksum[2]);
+		putInt32(mBuffer, OFS_CHECKSUM + 12, aChecksum[3]);
 		return this;
 	}
 
 
-	public boolean verifyChecksum(long[] aChecksum)
+	public boolean verifyChecksum(int[] aChecksum)
 	{
-		assert aChecksum.length == 2;
+		assert aChecksum.length == 4;
 
-		return aChecksum[0] == getInt64(mBuffer, OFS_CHECKSUM + 0)
-			&& aChecksum[1] == getInt64(mBuffer, OFS_CHECKSUM + 8);
+		return aChecksum[0] == getInt32(mBuffer, OFS_CHECKSUM + 0)
+			&& aChecksum[1] == getInt32(mBuffer, OFS_CHECKSUM + 4)
+			&& aChecksum[2] == getInt32(mBuffer, OFS_CHECKSUM + 8)
+			&& aChecksum[3] == getInt32(mBuffer, OFS_CHECKSUM + 12);
 	}
 
 
@@ -275,13 +281,13 @@ public final class BlockPointer implements Serializable
 		setAllocatedSize(aArray.getInt(4));
 		setLogicalSize(aArray.getInt(5));
 		setPhysicalSize(aArray.getInt(6));
-		setTransactionId(aArray.getLong(7));
+		setGeneration(aArray.getLong(7));
 		Array ptr = aArray.getArray(8);
 		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
 		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
 		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
 		setBlockKey(aArray.getArray(9).toInts());
-		setChecksum(aArray.getArray(10).toLongs());
+		setChecksum(aArray.getArray(10).toInts());
 		return this;
 	}
 
@@ -300,7 +306,7 @@ public final class BlockPointer implements Serializable
 			getAllocatedSize(),
 			getLogicalSize(),
 			getPhysicalSize(),
-			getTransactionId(), ptr,
+			getGeneration(), ptr,
 			Array.of(getBlockKey()),
 			Array.of(getChecksum())
 		);
@@ -328,6 +334,6 @@ public final class BlockPointer implements Serializable
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%d, level=%d, offset=%d, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getTransactionId());
+		return Console.format("{type=%d, level=%d, offset=%d, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration());
 	}
 }

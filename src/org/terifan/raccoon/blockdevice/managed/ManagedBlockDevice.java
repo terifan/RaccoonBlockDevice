@@ -1,5 +1,6 @@
 package org.terifan.raccoon.blockdevice.managed;
 
+import java.io.IOException;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
@@ -20,7 +21,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	private Document mMetadata;
 
 
-	public ManagedBlockDevice(PhysicalBlockDevice aBlockDevice)
+	public ManagedBlockDevice(PhysicalBlockDevice aBlockDevice) throws IOException
 	{
 		if (aBlockDevice == null)
 		{
@@ -41,7 +42,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void init()
+	private void init() throws IOException
 	{
 		if (mWasCreated)
 		{
@@ -54,7 +55,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void createBlockDevice()
+	private void createBlockDevice() throws IOException
 	{
 		Log.i("create block device");
 		Log.inc();
@@ -77,7 +78,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void loadBlockDevice()
+	private void loadBlockDevice() throws IOException
 	{
 		Log.i("load block device");
 		Log.inc();
@@ -131,9 +132,9 @@ public class ManagedBlockDevice implements AutoCloseable
 	/**
 	 * @return the current transaction id. This value is incremented for each commit.
 	 */
-	public long getTransactionId()
+	public long getGeneration()
 	{
-		return mSuperBlock.getTransactionId();
+		return mSuperBlock.getGeneration();
 	}
 
 
@@ -147,7 +148,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 
 	@Override
-	public void close()
+	public void close() throws IOException
 	{
 		if (mModified)
 		{
@@ -294,7 +295,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 *
 	 * @param aMetadata force update of metadata
 	 */
-	public void commit(boolean aMetadata)
+	public void commit(boolean aMetadata) throws IOException
 	{
 		if (mModified)
 		{
@@ -326,7 +327,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	/**
 	 * Commit any pending blocks.
 	 */
-	public void commit()
+	public void commit() throws IOException
 	{
 		commit(false);
 	}
@@ -335,7 +336,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	/**
 	 * Rollback any pending blocks.
 	 */
-	public void rollback()
+	public void rollback() throws IOException
 	{
 		if (mModified)
 		{
@@ -354,7 +355,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void readSuperBlock()
+	private void readSuperBlock() throws IOException
 	{
 		Log.d("read super block");
 		Log.inc();
@@ -365,14 +366,14 @@ public class ManagedBlockDevice implements AutoCloseable
 		Document metadataOne = superBlockOne.read(mPhysBlockDevice, 0L);
 		Document metadataTwo = superBlockTwo.read(mPhysBlockDevice, 1L);
 
-		if (superBlockOne.getTransactionId() == superBlockTwo.getTransactionId() + 1)
+		if (superBlockOne.getGeneration() == superBlockTwo.getGeneration() + 1)
 		{
 			mSuperBlock = superBlockOne;
 			mMetadata = metadataOne;
 
 			Log.d("using super block 0");
 		}
-		else if (superBlockTwo.getTransactionId() == superBlockOne.getTransactionId() + 1)
+		else if (superBlockTwo.getGeneration() == superBlockOne.getGeneration() + 1)
 		{
 			mSuperBlock = superBlockTwo;
 			mMetadata = metadataTwo;
@@ -381,16 +382,16 @@ public class ManagedBlockDevice implements AutoCloseable
 		}
 		else
 		{
-			throw new IllegalStateException("Database appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getTransactionId() + " / " + superBlockTwo.getTransactionId());
+			throw new IOException("Database appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getGeneration() + " / " + superBlockTwo.getGeneration());
 		}
 
 		Log.dec();
 	}
 
 
-	private void writeSuperBlock()
+	private void writeSuperBlock() throws IOException
 	{
-		long pageIndex = mSuperBlock.nextTransactionId() & 1L;
+		long pageIndex = mSuperBlock.incrementGeneration() & 1L;
 
 		Log.i("write super block %d", pageIndex);
 		Log.inc();
@@ -452,7 +453,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	/**
 	 * Frees all blocks.
 	 */
-	public void clear()
+	public void clear() throws IOException
 	{
 		mPhysBlockDevice.resize(0);
 
