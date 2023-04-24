@@ -10,12 +10,22 @@ import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 import org.terifan.raccoon.security.random.SecureRandom;
 
 
+/*
+ *    16  IV
+ *     2  Format version
+ *     8  Created date/time
+ *     8  Changed date/time
+ *    16  Transaction counter
+ *   128  SpaceMap BlockPointer
+ *  3838  Metadata
+ *    32  Checksum
+ */
 class SuperBlock
 {
 	private final static byte FORMAT_VERSION = 1;
 	private final static int IV_SIZE = 16;
 	private final static int CHECKSUM_SIZE = 16;
-	private final static int OVERHEAD = 256; // = IV_SIZE + 1 + 8 + 8 + 8 + BlockPointer.SIZE + 2 + CHECKSUM_SIZE
+	private final static int OVERHEAD = 205; // = IV_SIZE + 1 + 8 + 8 + 8 + BlockPointer.SIZE + 2 + CHECKSUM_SIZE
 	private final static SecureRandom PRNG = new SecureRandom();
 
 	private int mFormatVersion;
@@ -23,7 +33,6 @@ class SuperBlock
 	private long mModifiedTime;
 	private long mTransactionId;
 	private BlockPointer mSpaceMapPointer;
-	private Document mMetadata;
 
 
 	public SuperBlock(long aTransactionId)
@@ -32,14 +41,6 @@ class SuperBlock
 		mCreateTime = System.currentTimeMillis();
 		mSpaceMapPointer = new BlockPointer();
 		mTransactionId = aTransactionId;
-	}
-
-
-	public SuperBlock(PhysicalBlockDevice aBlockDevice, long aBlockIndex, long aTransactionId)
-	{
-		this(aTransactionId);
-
-		read(aBlockDevice, aBlockIndex);
 	}
 
 
@@ -91,13 +92,7 @@ class SuperBlock
 	}
 
 
-	Document getMetadata()
-	{
-		return mMetadata;
-	}
-
-
-	public void read(PhysicalBlockDevice aBlockDevice, long aBlockIndex)
+	public Document read(PhysicalBlockDevice aBlockDevice, long aBlockIndex)
 	{
 		int blockSize = aBlockDevice.getBlockSize();
 
@@ -124,7 +119,7 @@ class SuperBlock
 			}
 		}
 
-		unmarshal(buffer);
+		return unmarshal(buffer);
 	}
 
 
@@ -136,14 +131,13 @@ class SuperBlock
 		}
 
 		mModifiedTime = System.currentTimeMillis();
-		mMetadata = aMetadata;
 
 		int blockSize = aBlockDevice.getBlockSize();
 
 		ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockSize, true);
 		buffer.position(CHECKSUM_SIZE); // reserve space for checksum
 
-		marshal(buffer);
+		marshal(buffer, aMetadata);
 
 		if (aBlockDevice instanceof SecureBlockDevice)
 		{
@@ -169,9 +163,9 @@ class SuperBlock
 	}
 
 
-	private void marshal(ByteArrayBuffer aBuffer)
+	private void marshal(ByteArrayBuffer aBuffer, Document aMetadata)
 	{
-		byte[] metadata = mMetadata.toByteArray();
+		byte[] metadata = aMetadata.toByteArray();
 
 		if (OVERHEAD + metadata.length > aBuffer.capacity())
 		{
@@ -188,7 +182,7 @@ class SuperBlock
 	}
 
 
-	private void unmarshal(ByteArrayBuffer aBuffer)
+	private Document unmarshal(ByteArrayBuffer aBuffer)
 	{
 		mFormatVersion = aBuffer.readInt8();
 
@@ -201,6 +195,6 @@ class SuperBlock
 		mModifiedTime = aBuffer.readInt64();
 		mTransactionId = aBuffer.readInt64();
 		mSpaceMapPointer.unmarshal(aBuffer);
-		mMetadata = new Document().fromByteArray(aBuffer.read(new byte[aBuffer.readInt16()]));
+		return new Document().fromByteArray(aBuffer.read(new byte[aBuffer.readInt16()]));
 	}
 }

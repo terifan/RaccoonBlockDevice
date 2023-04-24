@@ -359,18 +359,23 @@ public class ManagedBlockDevice implements AutoCloseable
 		Log.d("read super block");
 		Log.inc();
 
-		SuperBlock superBlockOne = new SuperBlock(mPhysBlockDevice, 0L, -1L);
-		SuperBlock superBlockTwo = new SuperBlock(mPhysBlockDevice, 1L, -1L);
+		SuperBlock superBlockOne = new SuperBlock(-1L);
+		SuperBlock superBlockTwo = new SuperBlock(-1L);
+
+		Document metadataOne = superBlockOne.read(mPhysBlockDevice, 0L);
+		Document metadataTwo = superBlockTwo.read(mPhysBlockDevice, 1L);
 
 		if (superBlockOne.getTransactionId() == superBlockTwo.getTransactionId() + 1)
 		{
 			mSuperBlock = superBlockOne;
+			mMetadata = metadataOne;
 
 			Log.d("using super block 0");
 		}
 		else if (superBlockTwo.getTransactionId() == superBlockOne.getTransactionId() + 1)
 		{
 			mSuperBlock = superBlockTwo;
+			mMetadata = metadataTwo;
 
 			Log.d("using super block 1");
 		}
@@ -378,8 +383,6 @@ public class ManagedBlockDevice implements AutoCloseable
 		{
 			throw new IllegalStateException("Database appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getTransactionId() + " / " + superBlockTwo.getTransactionId());
 		}
-
-		mMetadata = mSuperBlock.getMetadata();
 
 		Log.dec();
 	}

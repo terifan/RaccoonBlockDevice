@@ -36,6 +36,9 @@ public final class BlockPointer implements Serializable
 	public BlockPointer()
 	{
 		mBuffer = new byte[SIZE];
+		setBlockIndex0(-1);
+		setBlockIndex1(-1);
+		setBlockIndex2(-1);
 	}
 
 
@@ -273,9 +276,10 @@ public final class BlockPointer implements Serializable
 		setLogicalSize(aArray.getInt(5));
 		setPhysicalSize(aArray.getInt(6));
 		setTransactionId(aArray.getLong(7));
-		setBlockIndex0(aArray.getArray(8).getLong(0));
-		setBlockIndex1(aArray.getArray(8).getLong(1));
-		setBlockIndex2(aArray.getArray(8).getLong(2));
+		Array ptr = aArray.getArray(8);
+		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
+		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
+		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
 		setBlockKey(aArray.getArray(9).toInts());
 		setChecksum(aArray.getArray(10).toLongs());
 		return this;
@@ -284,16 +288,19 @@ public final class BlockPointer implements Serializable
 
 	public Array marshalDoc()
 	{
-		return Array.of(
-			getBlockType(),
+		Array ptr = new Array();
+		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
+		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
+		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
+
+		return Array.of(getBlockType(),
 			getBlockLevel(),
 			getCompressionAlgorithm(),
 			getChecksumAlgorithm(),
 			getAllocatedSize(),
 			getLogicalSize(),
 			getPhysicalSize(),
-			getTransactionId(),
-			Array.of(getBlockIndex0(), getBlockIndex1(), getBlockIndex2()),
+			getTransactionId(), ptr,
 			Array.of(getBlockKey()),
 			Array.of(getChecksum())
 		);
@@ -321,6 +328,6 @@ public final class BlockPointer implements Serializable
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%d, offset=%d, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getTransactionId());
+		return Console.format("{type=%d, level=%d, offset=%d, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getTransactionId());
 	}
 }
