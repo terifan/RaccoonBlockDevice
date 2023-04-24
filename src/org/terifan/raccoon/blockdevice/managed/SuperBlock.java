@@ -15,7 +15,7 @@ import org.terifan.raccoon.security.messagedigest.SHA3;
 class SuperBlock
 {
 	private final static int DIGEST_LENGTH = 64;
-	private final static int BLOCK_SIZE = 4096;
+	final static int BLOCK_SIZE = 4096;
 
 	private long mGeneration;
 	private long mCreateTime;
@@ -61,10 +61,12 @@ class SuperBlock
 	}
 
 
-	public Document read(PhysicalBlockDevice aBlockDevice, long aBlockIndex) throws IOException
+	public Document read(PhysicalBlockDevice aBlockDevice, int aIndex) throws IOException
 	{
-		byte[] buffer = new byte[aBlockDevice.getBlockSize()];
-		aBlockDevice.readBlock(aBlockIndex, buffer, 0, buffer.length, createBlockKey(aBlockIndex));
+		int blockIndex = aIndex * BLOCK_SIZE / aBlockDevice.getBlockSize();
+
+		byte[] buffer = new byte[BLOCK_SIZE];
+		aBlockDevice.readBlock(blockIndex, buffer, 0, buffer.length, createBlockKey(blockIndex));
 
 		SHA3 sha = new SHA3(512);
 		sha.update(buffer, 0, buffer.length - DIGEST_LENGTH);
@@ -74,7 +76,7 @@ class SuperBlock
 
 		if (!Arrays.equals(found, expected))
 		{
-			throw new DeviceException("Checksum error at block index " + aBlockIndex);
+			throw new DeviceException("Checksum error in SuperBlock #" + aIndex);
 		}
 
 		try (Marshaller marshaller = new Marshaller(new ByteArrayInputStream(buffer)))
@@ -90,8 +92,10 @@ class SuperBlock
 	}
 
 
-	public void write(PhysicalBlockDevice aBlockDevice, long aBlockIndex, Document aMetadata) throws IOException
+	public void write(PhysicalBlockDevice aBlockDevice, int aIndex, Document aMetadata) throws IOException
 	{
+		int blockIndex = aIndex * BLOCK_SIZE / aBlockDevice.getBlockSize();
+
 		mChangedTime = System.currentTimeMillis();
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -115,11 +119,9 @@ class SuperBlock
 
 		SHA3 sha = new SHA3(512);
 		sha.update(buffer, 0, buffer.length - DIGEST_LENGTH);
+		System.arraycopy(sha.digest(), 0, buffer, buffer.length - DIGEST_LENGTH, DIGEST_LENGTH);
 
-		byte[] digest = sha.digest();
-		System.arraycopy(digest, 0, buffer, buffer.length - DIGEST_LENGTH, DIGEST_LENGTH);
-
-		aBlockDevice.writeBlock(aBlockIndex, buffer, 0, buffer.length, createBlockKey(aBlockIndex));
+		aBlockDevice.writeBlock(blockIndex, buffer, 0, buffer.length, createBlockKey(blockIndex));
 	}
 
 

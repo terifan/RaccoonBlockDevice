@@ -16,11 +16,11 @@ public class BlockAccessorNGTest
 	@Test
 	public void testWriteReadFreeSingleBlock() throws IOException
 	{
-		int length = 3 * 512;
+		int length = 3 * 4096;
 		byte[] in = new byte[100 + length + 100];
 		new Random().nextBytes(in);
 
-		MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
+		MemoryBlockDevice blockDevice = new MemoryBlockDevice(4096);
 
 		ManagedBlockDevice managedBlockDevice = new ManagedBlockDevice(blockDevice);
 		BlockAccessor blockAccessor = new BlockAccessor(managedBlockDevice, true);

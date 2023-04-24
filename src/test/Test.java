@@ -13,6 +13,7 @@ import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.LobHeader;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
+import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.document.Array;
 
 
@@ -27,14 +28,14 @@ public class Test
 			AccessCredentials ac = new AccessCredentials("password");
 			SecureRandom rnd = new SecureRandom();
 
-			byte[] directBlockData = new byte[4096 * 10];
+			byte[] directBlockData = new byte[4096 * 5];
 			rnd.nextBytes(directBlockData);
 
 			byte[] lobData = new byte[1024 * 1024 * 10];
 			rnd.nextBytes(lobData);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.create(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.create(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -57,7 +58,7 @@ public class Test
 //			Log.setLevel(LogLevel.DEBUG);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.open(ac, new FileBlockDevice(Paths.get("d:\\test.dev")))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.open(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());
@@ -72,7 +73,7 @@ public class Test
 				int[] blockKey = db.getArray("blockKey").toInts();
 				long blockIndex = db.getLong("blockIndex");
 
-				byte[] in = new byte[dev.getBlockSize() * 10];
+				byte[] in = new byte[4096 * 5];
 				dev.readBlock(blockIndex, in, 0, in.length, blockKey);
 
 				System.out.println(Arrays.equals(in, directBlockData));

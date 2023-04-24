@@ -9,8 +9,6 @@ import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 
 public class ManagedBlockDevice implements AutoCloseable
 {
-	private final static int RESERVED_BLOCKS = 2;
-
 	private PhysicalBlockDevice mPhysBlockDevice;
 	private SuperBlock mSuperBlock;
 	private int mBlockSize;
@@ -19,6 +17,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	private boolean mDoubleCommit;
 	private SpaceMap mSpaceMap;
 	private Document mMetadata;
+	private int mReservedBlocks;
 
 
 	public ManagedBlockDevice(PhysicalBlockDevice aBlockDevice) throws IOException
@@ -34,8 +33,9 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		mPhysBlockDevice = aBlockDevice;
 		mBlockSize = aBlockDevice.getBlockSize();
+		mReservedBlocks = 2 * SuperBlock.BLOCK_SIZE / mBlockSize;
 		mMetadata = new Document();
-		mWasCreated = mPhysBlockDevice.size() < RESERVED_BLOCKS;
+		mWasCreated = mPhysBlockDevice.size() < mReservedBlocks;
 		mDoubleCommit = true;
 
 		init();
@@ -63,7 +63,7 @@ public class ManagedBlockDevice implements AutoCloseable
 		mSpaceMap = new SpaceMap();
 		mSuperBlock = new SuperBlock(-1L); // counter is incremented in writeSuperBlock method and we want to ensure we write block 0 before block 1
 
-		long index = allocBlockInternal(2);
+		long index = allocBlockInternal(mReservedBlocks);
 
 		if (index != 0)
 		{
@@ -107,7 +107,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 
 	/**
-	 * Note: the serialized Document must be shorter than one block length minus 256 bytes.
+	 * Note: the serialized Document must fit inside the SuperBlock and be max (approx) 3500 bytes in length.
 	 *
 	 * @return a Document containing information about the application using the block device.
 	 */
@@ -118,7 +118,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 
 	/**
-	 * Note: the serialized Document must be shorter than one block length minus 256 bytes.
+	 * Note: the serialized Document must fit inside the SuperBlock and be max (approx) 3500 bytes in length.
 	 *
 	 * @param aMetadata sets the metadata document for this BlockDevice.
 	 */
@@ -143,7 +143,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public long size()
 	{
-		return mPhysBlockDevice.size() - RESERVED_BLOCKS;
+		return mPhysBlockDevice.size() - mReservedBlocks;
 	}
 
 
@@ -174,7 +174,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public long allocBlock(int aBlockCount)
 	{
-		long blockIndex = allocBlockInternal(aBlockCount) - RESERVED_BLOCKS;
+		long blockIndex = allocBlockInternal(aBlockCount) - mReservedBlocks;
 
 		if (blockIndex < 0)
 		{
@@ -205,7 +205,7 @@ public class ManagedBlockDevice implements AutoCloseable
 			throw new DeviceException("Illegal offset: " + aBlockIndex);
 		}
 
-		freeBlockInternal(RESERVED_BLOCKS + aBlockIndex, aBlockCount);
+		freeBlockInternal(mReservedBlocks + aBlockIndex, aBlockCount);
 	}
 
 
@@ -237,7 +237,7 @@ public class ManagedBlockDevice implements AutoCloseable
 			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
-		writeBlockInternal(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
+		writeBlockInternal(mReservedBlocks + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 	}
 
 
@@ -270,7 +270,7 @@ public class ManagedBlockDevice implements AutoCloseable
 			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
-		readBlockInternal(aBlockIndex + RESERVED_BLOCKS, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
+		readBlockInternal(aBlockIndex + mReservedBlocks, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 	}
 
 
@@ -363,8 +363,8 @@ public class ManagedBlockDevice implements AutoCloseable
 		SuperBlock superBlockOne = new SuperBlock(-1L);
 		SuperBlock superBlockTwo = new SuperBlock(-1L);
 
-		Document metadataOne = superBlockOne.read(mPhysBlockDevice, 0L);
-		Document metadataTwo = superBlockTwo.read(mPhysBlockDevice, 1L);
+		Document metadataOne = superBlockOne.read(mPhysBlockDevice, 0);
+		Document metadataTwo = superBlockTwo.read(mPhysBlockDevice, 1);
 
 		if (superBlockOne.getGeneration() == superBlockTwo.getGeneration() + 1)
 		{
@@ -382,7 +382,7 @@ public class ManagedBlockDevice implements AutoCloseable
 		}
 		else
 		{
-			throw new IOException("Database appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getGeneration() + " / " + superBlockTwo.getGeneration());
+			throw new IOException("BlockDevice appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getGeneration() + " / " + superBlockTwo.getGeneration());
 		}
 
 		Log.dec();
@@ -391,12 +391,12 @@ public class ManagedBlockDevice implements AutoCloseable
 
 	private void writeSuperBlock() throws IOException
 	{
-		long pageIndex = mSuperBlock.incrementGeneration() & 1L;
+		int index = (int)(mSuperBlock.incrementGeneration() & 1);
 
-		Log.i("write super block %d", pageIndex);
+		Log.i("write super block %d", index);
 		Log.inc();
 
-		mSuperBlock.write(mPhysBlockDevice, pageIndex, mMetadata);
+		mSuperBlock.write(mPhysBlockDevice, index, mMetadata);
 
 		Log.dec();
 	}
@@ -446,7 +446,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public void resize(long aNumberOfBlocks)
 	{
-		mPhysBlockDevice.resize(RESERVED_BLOCKS + aNumberOfBlocks);
+		mPhysBlockDevice.resize(mReservedBlocks + aNumberOfBlocks);
 	}
 
 

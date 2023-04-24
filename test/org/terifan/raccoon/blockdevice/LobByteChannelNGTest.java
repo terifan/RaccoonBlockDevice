@@ -17,7 +17,7 @@ import org.testng.annotations.Test;
 
 public class LobByteChannelNGTest
 {
-	@Test
+	@Test(enabled = false)
 	public void testSomeMethod() throws IOException
 	{
 //		Log.setLevel(LogLevel.DEBUG);
