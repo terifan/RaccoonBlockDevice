@@ -1,5 +1,8 @@
 package org.terifan.raccoon.blockdevice;
 
+import org.terifan.raccoon.blockdevice.util.ByteArrayUtil;
+
+
 
 public interface BlockDevice extends AutoCloseable
 {
@@ -14,6 +17,16 @@ public interface BlockDevice extends AutoCloseable
 	 */
 	void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
 
+	default void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
+	{
+		int[] blockKey = new int[4];
+		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
+		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
+		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
+		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
+		readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
+	}
+
 
 	/**
 	 * Write a single block to the device.
@@ -25,6 +38,16 @@ public interface BlockDevice extends AutoCloseable
 	 * @param aBlockKey 128 bit seed value that may be used by block device implementations performing cryptography
 	 */
 	void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
+
+	default void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
+	{
+		int[] blockKey = new int[4];
+		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
+		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
+		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
+		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
+		writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
+	}
 
 
 	/**
@@ -60,16 +83,4 @@ public interface BlockDevice extends AutoCloseable
 	 * @param aNumberOfBlocks number of blocks
 	 */
 	void resize(long aNumberOfBlocks);
-
-
-	/**
-	 * Close the block device not permitting any future changes to happen. Invoked when an error has occurred that may jeopardize the
-	 * integrity of the block device.
-	 *
-	 * Default implementation calls close.
-	 */
-//	default void forceClose()
-//	{
-//		close();
-//	}
 }
