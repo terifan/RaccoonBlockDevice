@@ -35,7 +35,7 @@ public class Test
 			rnd.nextBytes(lobData);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.create(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -58,7 +58,7 @@ public class Test
 //			Log.setLevel(LogLevel.DEBUG);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(SecureBlockDevice.open(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());

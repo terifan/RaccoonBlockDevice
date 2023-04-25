@@ -1,22 +1,17 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Arrays;
-import org.terifan.raccoon.blockdevice.physical.FileAlreadyOpenException;
 import org.terifan.raccoon.security.cryptography.BlockCipher;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.cryptography.SecretKey;
 import static java.util.Arrays.fill;
-import java.util.Random;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getBytes;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
-import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
-import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
+import org.terifan.raccoon.security.random.ISAAC.PRNG;
+import org.terifan.raccoon.security.random.SecureRandom;
 
 
 /**
@@ -27,8 +22,6 @@ import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
  */
 public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseable
 {
-	private final static int BOOT_BLOCK_COUNT = 2;
-	private final static int RESERVED_BLOCKS = BOOT_BLOCK_COUNT;
 	private final static int SALT_SIZE = 256;
 	private final static int PAYLOAD_SIZE = 256;
 	private final static int HEADER_SIZE = 4;
@@ -37,36 +30,12 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	private final static int KEY_POOL_SIZE = KEY_SIZE_BYTES + 3 * KEY_SIZE_BYTES + 3 * IV_SIZE;
 	private final static int CHECKSUM_SEED = 0xfedcba98;
 
-	private final static Random PRNG;
-	static
-	{
-		Random tmp;
-		try
-		{
-			tmp = SecureRandom.getInstanceStrong();
-		}
-		catch (NoSuchAlgorithmException e)
-		{
-			tmp = new SecureRandom();
-		}
-		PRNG = tmp;
-	}
-
+	private transient int mBootBlockCount;
 	private transient PhysicalBlockDevice mBlockDevice;
 	private transient CipherImplementation mCipherImplementation;
 
 
-	/**
-	 *
-	 * Note: the AccessCredentials object provides the SecureBlockDevice with cryptographic keys and is slow to instantiate.
-	 * Reuse the same AccessCredentials instance for a single password when opening multiple SecureBlockDevices.
-	 */
-	private SecureBlockDevice()
-	{
-	}
-
-
-	public static SecureBlockDevice create(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
+	public SecureBlockDevice(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
 	{
 		if (aBlockDevice == null)
 		{
@@ -76,64 +45,63 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 		{
 			throw new IllegalArgumentException("AccessCredentials is null");
 		}
-		if (aBlockDevice.getBlockSize() < 512)
+
+		mBootBlockCount = 2;
+		mBlockDevice = aBlockDevice;
+
+		if (mBlockDevice.size() == 0)
 		{
-			throw new IllegalArgumentException("Block size must be 512 bytes or more.");
-		}
+			Log.i("create boot block");
+			Log.inc();
 
-		SecureBlockDevice device = new SecureBlockDevice();
-		device.mBlockDevice = aBlockDevice;
-
-		Log.i("create boot block");
-		Log.inc();
-
-		byte[] payload = new byte[PAYLOAD_SIZE];
-
-		for (;;)
-		{
-			// create the secret keys
-			byte[] raw = new byte[PAYLOAD_SIZE * 8];
-			PRNG.nextBytes(raw);
-
-			for (int dst = 0, src = 0; dst < payload.length; dst++)
+			for (boolean valid = false; !valid;)
 			{
-				for (long i = System.nanoTime() & 7; i >= 0; i--)
+				valid = true;
+				byte[] payload = new SecureRandom().bytes(PAYLOAD_SIZE).toArray();
+
+				for (int index = 0; index < mBootBlockCount; index++)
 				{
-					payload[dst] ^= raw[src++];
+					byte[] blockData = createBootBlock(aAccessCredentials, payload, index, mBlockDevice.getBlockSize());
+
+					mBlockDevice.writeBlock(index, blockData, 0, blockData.length, new int[4]);
+
+					CipherImplementation cipher = readBootBlock(aAccessCredentials, blockData, index, true);
+
+					if (cipher == null)
+					{
+						valid = false;
+						break;
+					}
+
+					mCipherImplementation = cipher;
 				}
 			}
 
-			if (createImpl(aAccessCredentials, device, payload, 0L) && createImpl(aAccessCredentials, device, payload, 1L))
+			Log.dec();
+		}
+		else
+		{
+			mBlockDevice = aBlockDevice;
+
+			byte[] blockData = new byte[mBlockDevice.getBlockSize()];
+
+			for (int index = 0; index < mBootBlockCount; index++)
 			{
-				break;
+				Log.i("open boot block #%s", index);
+				Log.inc();
+
+				mBlockDevice.readBlock(index, blockData, 0, blockData.length, new int[4]);
+
+				mCipherImplementation = readBootBlock(aAccessCredentials, blockData, index, false);
+
+				if (mCipherImplementation != null)
+				{
+					break;
+				}
+
+				Log.dec();
 			}
 		}
-
-		// cleanup
-		Arrays.fill(payload, (byte)0);
-
-		Log.dec();
-
-		return device;
-	}
-
-
-	private static boolean createImpl(AccessCredentials aAccessCredentials, SecureBlockDevice aDevice, byte[] aPayload, long aBlockIndex)
-	{
-		byte[] blockData = createBootBlock(aAccessCredentials, aPayload, aBlockIndex, aDevice.mBlockDevice.getBlockSize());
-
-		CipherImplementation cipher = readBootBlock(aAccessCredentials, blockData, aBlockIndex, true);
-
-		if (cipher == null)
-		{
-			// TODO: improve
-			return false;
-		}
-
-		aDevice.mCipherImplementation = cipher;
-		aDevice.mBlockDevice.writeBlock(aBlockIndex, blockData, 0, blockData.length, new int[4]);
-
-		return true;
 	}
 
 
@@ -168,55 +136,6 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 		System.arraycopy(padding, 0, blockData, SALT_SIZE + PAYLOAD_SIZE, padding.length);
 
 		return blockData;
-	}
-
-
-	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
-	{
-		return open(aAccessCredentials, aBlockDevice, 0);
-	}
-
-
-	public static SecureBlockDevice open(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice, long aBlockIndex)
-	{
-		if (aBlockDevice == null)
-		{
-			throw new IllegalArgumentException("BlockDevice is null");
-		}
-		if (aAccessCredentials == null)
-		{
-			throw new IllegalArgumentException("AccessCredentials is null");
-		}
-		if (aBlockDevice.getBlockSize() < 512)
-		{
-			throw new IllegalArgumentException("Block size is less than 512 bytes");
-		}
-
-		Log.i("open boot block #%s", aBlockIndex);
-		Log.inc();
-
-		SecureBlockDevice device = new SecureBlockDevice();
-		device.mBlockDevice = aBlockDevice;
-
-		byte[] blockData = new byte[device.mBlockDevice.getBlockSize()];
-
-		try
-		{
-			device.mBlockDevice.readBlock(aBlockIndex, blockData, 0, blockData.length, new int[4]);
-		}
-		catch (Exception e)
-		{
-			throw new FileAlreadyOpenException("Error reading boot block. Database file might already be open?", e);
-		}
-
-		device.mCipherImplementation = readBootBlock(aAccessCredentials, blockData, aBlockIndex, false);
-
-		if (device.mCipherImplementation != null)
-		{
-			return device;
-		}
-
-		return null;
 	}
 
 
@@ -290,9 +209,9 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 
 		byte[] workBuffer = aBuffer.clone();
 
-		mCipherImplementation.encrypt(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, aIV);
+		mCipherImplementation.encrypt(mBootBlockCount + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, aIV);
 
-		mBlockDevice.writeBlock(RESERVED_BLOCKS + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
+		mBlockDevice.writeBlock(mBootBlockCount + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
 
 		Log.dec();
 	}
@@ -307,9 +226,9 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
 		Log.inc();
 
-		mBlockDevice.readBlock(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
+		mBlockDevice.readBlock(mBootBlockCount + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
 
-		mCipherImplementation.decrypt(RESERVED_BLOCKS + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aIV);
+		mCipherImplementation.decrypt(mBootBlockCount + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aIV);
 
 		Log.dec();
 	}
@@ -325,7 +244,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	@Override
 	public long size()
 	{
-		return mBlockDevice.size() - RESERVED_BLOCKS;
+		return mBlockDevice.size() - mBootBlockCount;
 	}
 
 
@@ -339,7 +258,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	@Override
 	public void resize(long aNumberOfBlocks)
 	{
-		mBlockDevice.resize(aNumberOfBlocks + RESERVED_BLOCKS);
+		mBlockDevice.resize(aNumberOfBlocks + mBootBlockCount);
 	}
 
 
@@ -356,44 +275,6 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 		{
 			mBlockDevice.close();
 			mBlockDevice = null;
-		}
-	}
-
-
-	protected void validateBootBlocks(AccessCredentials aAccessCredentials)
-	{
-		byte[] original = new byte[mBlockDevice.getBlockSize()];
-		byte[] encypted = original.clone();
-
-		for (int i = 0; i < BOOT_BLOCK_COUNT; i++)
-		{
-			CipherImplementation cipher;
-
-			try
-			{
-				SecureBlockDevice tmp = SecureBlockDevice.open(aAccessCredentials, mBlockDevice, i);
-				cipher = tmp.mCipherImplementation;
-			}
-			catch (Exception e)
-			{
-				throw new DeviceException("Failed to read boot block " + i);
-			}
-
-			if (i == 0)
-			{
-				cipher.encrypt(0, encypted, 0, original.length, new int[4]);
-			}
-			else
-			{
-				byte[] decrypted = encypted.clone();
-
-				cipher.decrypt(0, decrypted, 0, original.length, new int[4]);
-
-				if (!Arrays.equals(original, decrypted))
-				{
-					throw new DeviceException("Boot blocks are incompatible");
-				}
-			}
 		}
 	}
 

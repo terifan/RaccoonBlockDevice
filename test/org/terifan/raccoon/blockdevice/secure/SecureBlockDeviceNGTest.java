@@ -2,7 +2,9 @@ package org.terifan.raccoon.blockdevice.secure;
 
 import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
+import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
@@ -10,22 +12,32 @@ import static org.testng.Assert.*;
 public class SecureBlockDeviceNGTest
 {
 	@Test
-	public void testLoadBootBlock() throws IOException
+	public void test1() throws IOException
 	{
-		MemoryBlockDevice blockDevice = new MemoryBlockDevice(4096);
+		MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
 		AccessCredentials accessCredentials = new AccessCredentials("password");
 
-		try (SecureBlockDevice device = SecureBlockDevice.create(accessCredentials, blockDevice))
+		byte[] out = new byte[512];
+		byte[] in = new byte[512];
+		int[] key = new Random(1).ints(4).toArray();
+
+		Arrays.fill(out, (byte)65);
+
+//		try (PhysicalBlockDevice device = blockDevice)
+		try (SecureBlockDevice device = new SecureBlockDevice(accessCredentials, blockDevice))
 		{
-			device.writeBlock(0, new byte[4096], 0, 4096, new int[4]);
+			device.writeBlock(0, out, 0, out.length, key);
 		}
 
-		assertEquals(blockDevice.size(), 3);
+		blockDevice.dump();
 
-		try (SecureBlockDevice device = SecureBlockDevice.open(accessCredentials, blockDevice))
+//		try (PhysicalBlockDevice device = blockDevice)
+		try (SecureBlockDevice device = new SecureBlockDevice(accessCredentials, blockDevice))
 		{
-			device.validateBootBlocks(accessCredentials);
+			device.readBlock(0, in, 0, in.length, key);
 		}
+
+		assertEquals(out, in);
 	}
 
 
@@ -62,7 +74,7 @@ public class SecureBlockDeviceNGTest
 
 					long t0 = System.currentTimeMillis();
 
-					try (SecureBlockDevice device = SecureBlockDevice.create(new AccessCredentials("password".toCharArray(), ef, kgf, cmf).setIterationCount(1), blockDevice))
+					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray(), ef, kgf, cmf).setIterationCount(1), blockDevice))
 					{
 						for (int i = 0; i < numUnits / blocksPerUnit; i++)
 						{
@@ -76,7 +88,7 @@ public class SecureBlockDeviceNGTest
 
 					byte[] output = new byte[numUnits * unitSize];
 
-					try (SecureBlockDevice device = SecureBlockDevice.open(new AccessCredentials("password".toCharArray()).setIterationCount(1), blockDevice))
+					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray()).setIterationCount(1), blockDevice))
 					{
 						for (int i = 0; i < numUnits / blocksPerUnit; i++)
 						{

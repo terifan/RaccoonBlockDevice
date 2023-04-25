@@ -1,9 +1,5 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import org.terifan.raccoon.blockdevice.secure.CipherModeFunction;
-import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
-import org.terifan.raccoon.blockdevice.secure.KeyGenerationFunction;
-import org.terifan.raccoon.blockdevice.secure.EncryptionFunction;
 import org.terifan.raccoon.blockdevice.util.Log;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;

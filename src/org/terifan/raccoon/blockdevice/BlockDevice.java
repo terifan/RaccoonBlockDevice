@@ -17,15 +17,15 @@ public interface BlockDevice extends AutoCloseable
 	 */
 	void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
 
-	default void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
-	{
-		int[] blockKey = new int[4];
-		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
-		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
-		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
-		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
-		readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
-	}
+//	default void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
+//	{
+//		int[] blockKey = new int[4];
+//		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
+//		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
+//		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
+//		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
+//		readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
+//	}
 
 
 	/**
@@ -39,15 +39,15 @@ public interface BlockDevice extends AutoCloseable
 	 */
 	void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
 
-	default void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
-	{
-		int[] blockKey = new int[4];
-		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
-		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
-		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
-		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
-		writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
-	}
+//	default void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
+//	{
+//		int[] blockKey = new int[4];
+//		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
+//		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
+//		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
+//		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
+//		writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
+//	}
 
 
 	/**

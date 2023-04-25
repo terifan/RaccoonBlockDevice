@@ -39,8 +39,6 @@ public class BlockPointerNGTest
 			.setLogicalSize(75)
 			.setPhysicalSize(50)
 			.setBlockIndex0(3421654)
-			.setBlockIndex1(0)
-			.setBlockIndex2(0)
 			.setGeneration(3216)
 			.setBlockKey(new int[]{0x88888888,0x99999999,0xaaaaaaaa,0xbbbbbbbb})
 			.setChecksum(new int[]{0xcccccccc,0xcccccccc,0xdddddddd,0xdddddddd})
@@ -49,5 +47,25 @@ public class BlockPointerNGTest
 		System.out.println(bp.marshalDoc());
 		System.out.println(bp.marshalDoc().toByteArray().length);
 		Log.hexDump(bp.marshalDoc().toByteArray());
+
+//		System.out.println(bp.marshalDoc2());
+//		System.out.println(bp.marshalDoc2().toByteArray().length);
+//		Log.hexDump(bp.marshalDoc2().toByteArray());
+//
+//		System.out.println(bp.marshalDoc3());
+//		System.out.println(bp.marshalDoc3().toByteArray().length);
+//		Log.hexDump(bp.marshalDoc3().toByteArray());
+//
+		System.out.println(bp.marshalDoc4());
+		System.out.println(bp.marshalDoc4().toByteArray().length);
+		Log.hexDump(bp.marshalDoc4().toByteArray());
+
+//		System.out.println(bp.marshalDoc5());
+//		System.out.println(bp.marshalDoc5().toByteArray().length);
+//		Log.hexDump(bp.marshalDoc5().toByteArray());
+
+		System.out.println(bp.marshalDoc6());
+		System.out.println(bp.marshalDoc6().toByteArray().length);
+		Log.hexDump(bp.marshalDoc6().toByteArray());
 	}
 }

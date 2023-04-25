@@ -8,7 +8,7 @@ import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.DeviceException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
-import org.terifan.raccoon.document.Marshaller;
+import org.terifan.raccoon.document.StreamMarshaller;
 import org.terifan.raccoon.security.messagedigest.SHA3;
 
 
@@ -79,7 +79,7 @@ class SuperBlock
 			throw new DeviceException("Checksum error in SuperBlock #" + aIndex);
 		}
 
-		try (Marshaller marshaller = new Marshaller(new ByteArrayInputStream(buffer)))
+		try (StreamMarshaller marshaller = new StreamMarshaller(new ByteArrayInputStream(buffer)))
 		{
 			mGeneration = marshaller.read();
 			mCreateTime = marshaller.read();
@@ -99,7 +99,7 @@ class SuperBlock
 		mChangedTime = System.currentTimeMillis();
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		try (Marshaller marshaller = new Marshaller(baos))
+		try (StreamMarshaller marshaller = new StreamMarshaller(baos))
 		{
 			marshaller.write(mGeneration);
 			marshaller.write(mCreateTime);
