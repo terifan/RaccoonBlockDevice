@@ -274,18 +274,21 @@ public final class BlockPointer implements Serializable
 
 	public BlockPointer unmarshalDoc(Document aDocument)
 	{
-		setBlockType(aDocument.getInt("typ"));
-		setBlockLevel(aDocument.getInt("lvl"));
-		setCompressionAlgorithm(aDocument.getInt("cpa"));
-		setChecksumAlgorithm(aDocument.getInt("csa"));
-		setAllocatedSize(aDocument.getInt("all"));
-		setLogicalSize(aDocument.getArray("log").getInt(1));
-		setPhysicalSize(aDocument.getArray("phy").getInt(2));
-		setGeneration(aDocument.getLong("gen"));
-		Array ptr = aDocument.getArray("adr");
-		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
-		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
-		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
+		Array array = aDocument.getArray("inf");
+		setBlockType(array.getInt(0));
+		setBlockLevel(array.getInt(1));
+		setChecksumAlgorithm(array.getByte(2));
+		setCompressionAlgorithm(array.getInt(3));
+		setAllocatedSize(array.getInt(4));
+		setLogicalSize(array.getInt(5));
+		setPhysicalSize(array.getInt(6));
+		setGeneration(array.getLong(7));
+
+		Array adr = aDocument.getArray("adr");
+		if(adr.size()>0)setBlockIndex0(adr.getLong(0));
+		if(adr.size()>1)setBlockIndex1(adr.getLong(1));
+		if(adr.size()>2)setBlockIndex2(adr.getLong(2));
+
 		setBlockKey(aDocument.getArray("key").toInts());
 		setChecksum(aDocument.getArray("chk").toInts());
 		return this;
@@ -294,166 +297,67 @@ public final class BlockPointer implements Serializable
 
 	public Document marshalDoc()
 	{
-		Array ptr = new Array();
-		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
+		Array adr = new Array();
+		if (getBlockIndex0() >= 0) adr.add(getBlockIndex0());
+		if (getBlockIndex1() >= 0) adr.add(getBlockIndex1());
+		if (getBlockIndex2() >= 0) adr.add(getBlockIndex2());
 
 		return new Document()
-			.put("typ", getBlockType())
-			.put("lvl", getBlockLevel())
-			.put("cpa", getCompressionAlgorithm())
-			.put("csa", getChecksumAlgorithm())
-			.put("all", getAllocatedSize())
-			.put("log", getLogicalSize())
-			.put("phy", getPhysicalSize())
-			.put("gen", getGeneration())
-			.put("adr", ptr)
+			.put("inf", Array.of(
+				getBlockType(),
+				getBlockLevel(),
+				getChecksumAlgorithm(),
+				getCompressionAlgorithm(),
+				getAllocatedSize(),
+				getLogicalSize(),
+				getPhysicalSize(),
+				getGeneration())
+			)
+			.put("adr", adr)
 			.put("key", Array.of(getBlockKey()))
-			.put("chk",  Array.of(getChecksum()));
+			.put("chk", Array.of(getChecksum()));
 	}
 
 
-	public Document marshalDoc2()
+	public BlockPointer unmarshalDoc2(Array aArray)
+	{
+		setBlockType(aArray.getInt(0));
+		setBlockLevel(aArray.getInt(1));
+		setCompressionAlgorithm(aArray.getInt(2));
+		setChecksumAlgorithm(aArray.getByte(3));
+		setAllocatedSize(aArray.getInt(4));
+		setLogicalSize(aArray.getInt(5));
+		setPhysicalSize(aArray.getInt(6));
+		setGeneration(aArray.getLong(7));
+		Array ptr = aArray.getArray(8);
+		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
+		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
+		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
+		setBlockKey(aArray.getArray(9).toInts());
+		setChecksum(aArray.getArray(10).toInts());
+		return this;
+	}
+
+
+	public Array marshalDoc2()
 	{
 		Array ptr = new Array();
 		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
 		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
 		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
 
-		return new Document()
-			.put("0", Array.of(getBlockType(), getBlockLevel(), getCompressionAlgorithm(), getChecksumAlgorithm()))
-			.put("1", Array.of(getAllocatedSize(),getLogicalSize(),getPhysicalSize()))
-			.put("2", getGeneration())
-			.put("3", ptr)
-			.put("4", Array.of(getBlockKey()))
-			.put("5",  Array.of(getChecksum()));
+		return Array.of(getBlockType(),
+			getBlockLevel(),
+			getCompressionAlgorithm(),
+			getChecksumAlgorithm(),
+			getAllocatedSize(),
+			getLogicalSize(),
+			getPhysicalSize(),
+			getGeneration(), ptr,
+			Array.of(getBlockKey()),
+			Array.of(getChecksum())
+		);
 	}
-
-
-	public Document marshalDoc3()
-	{
-		Array ptr = new Array();
-		ptr.addAll(getBlockType(), getBlockLevel(), getCompressionAlgorithm(), getChecksumAlgorithm(), getAllocatedSize(), getLogicalSize(), getPhysicalSize(), getGeneration());
-		ptr.addAll(getBlockKey()[0],getBlockKey()[1],getBlockKey()[2],getBlockKey()[3]);
-		ptr.addAll(getChecksum()[0],getChecksum()[1],getChecksum()[2],getChecksum()[3]);
-		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
-
-		return new Document().put("_", ptr);
-	}
-
-
-	public Array marshalDoc4()
-	{
-		Array ptr = new Array();
-		ptr.addAll(getBlockType(), getBlockLevel(), getCompressionAlgorithm(), getChecksumAlgorithm(), getAllocatedSize(), getLogicalSize(), getPhysicalSize(), getGeneration());
-		ptr.addAll(getBlockKey()[0],getBlockKey()[1],getBlockKey()[2],getBlockKey()[3]);
-		ptr.addAll(getChecksum()[0],getChecksum()[1],getChecksum()[2],getChecksum()[3]);
-		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
-
-		return ptr;
-	}
-
-
-	public Array marshalDoc5()
-	{
-		Array ptr = new Array();
-		ptr.addAll(getBlockType(), getBlockLevel(), getCompressionAlgorithm(), getChecksumAlgorithm());
-		ptr.addAll(getGeneration());
-		ptr.add(Array.of(getAllocatedSize(), getLogicalSize(), getPhysicalSize()));
-		ptr.addAll(getBlockKey());
-		ptr.addAll(getChecksum());
-		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
-
-		return ptr;
-	}
-
-
-	public Document marshalDoc6()
-	{
-		Array ptr = new Array();
-		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
-
-		return new Document()
-			.put("0", getBlockType())
-			.put("1", getBlockLevel())
-			.put("2", getCompressionAlgorithm())
-			.put("3", getChecksumAlgorithm())
-			.put("4", getAllocatedSize())
-			.put("5", getLogicalSize())
-			.put("6", getPhysicalSize())
-			.put("7", getGeneration())
-			.put("8", getBlockKey()[0])
-			.put("9", getBlockKey()[1])
-			.put("10", getBlockKey()[2])
-			.put("11", getBlockKey()[3])
-			.put("12",  getChecksum()[0])
-			.put("13",  getChecksum()[1])
-			.put("14",  getChecksum()[2])
-			.put("15",  getChecksum()[3])
-			.put("16", ptr.get(0));
-//		return new Document()
-//			.put("0", getBlockType())
-//			.put("1", getBlockLevel())
-//			.put("2", getCompressionAlgorithm())
-//			.put("3", getChecksumAlgorithm())
-//			.put("4", getAllocatedSize())
-//			.put("5", getLogicalSize())
-//			.put("6", getPhysicalSize())
-//			.put("7", getGeneration())
-//			.put("8", Array.of(getBlockKey()))
-//			.put("9",  Array.of(getChecksum()))
-//			.put("10", ptr);
-	}
-
-
-//	public BlockPointer unmarshalDoc(Array aArray)
-//	{
-//		setBlockType(aArray.getInt(0));
-//		setBlockLevel(aArray.getInt(1));
-//		setCompressionAlgorithm(aArray.getInt(2));
-//		setChecksumAlgorithm(aArray.getByte(3));
-//		setAllocatedSize(aArray.getInt(4));
-//		setLogicalSize(aArray.getInt(5));
-//		setPhysicalSize(aArray.getInt(6));
-//		setGeneration(aArray.getLong(7));
-//		Array ptr = aArray.getArray(8);
-//		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
-//		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
-//		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
-//		setBlockKey(aArray.getArray(9).toInts());
-//		setChecksum(aArray.getArray(10).toInts());
-//		return this;
-//	}
-//
-//
-//	public Array marshalDoc()
-//	{
-//		Array ptr = new Array();
-//		if (getBlockIndex0() >= 0) ptr.add(getBlockIndex0());
-//		if (getBlockIndex1() >= 0) ptr.add(getBlockIndex1());
-//		if (getBlockIndex2() >= 0) ptr.add(getBlockIndex2());
-//
-//		return Array.of(getBlockType(),
-//			getBlockLevel(),
-//			getCompressionAlgorithm(),
-//			getChecksumAlgorithm(),
-//			getAllocatedSize(),
-//			getLogicalSize(),
-//			getPhysicalSize(),
-//			getGeneration(), ptr,
-//			Array.of(getBlockKey()),
-//			Array.of(getChecksum())
-//		);
-//	}
 
 
 	@Override

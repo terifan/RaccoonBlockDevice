@@ -1,6 +1,5 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,12 +34,20 @@ public class LobByteChannel implements SeekableByteChannel
 	private CompressorLevel mInteriorBlockCompressor;
 	private CompressorLevel mLeafBlockCompressor;
 	private BlockPointer mIndirectBlockPointer;
+	private Runnable mCloseAction;
 
 
 	public LobByteChannel(BlockAccessor aBlockAccessor, LobHeader aLobHeader, LobOpenOption aOpenOption) throws IOException
 	{
+		this(aBlockAccessor, aLobHeader, aOpenOption, ()->{});
+	}
+
+
+	public LobByteChannel(BlockAccessor aBlockAccessor, LobHeader aLobHeader, LobOpenOption aOpenOption, Runnable aCloseAction) throws IOException
+	{
 		mLobHeader = aLobHeader;
 		mBlockAccessor = aBlockAccessor;
+		mCloseAction = aCloseAction;
 
 		mInteriorBlockCompressor = CompressorLevel.ZLE;
 		mLeafBlockCompressor = CompressorLevel.NONE;
@@ -291,6 +298,12 @@ public class LobByteChannel implements SeekableByteChannel
 
 		mLobHeader.mData = new Document().put("totalSize", mTotalSize).put("blockSize", mLeafBlockSize).put("pointers", pointers);
 		mClosed = true;
+
+		if (mCloseAction != null)
+		{
+			mCloseAction.run();
+			mCloseAction = null;
+		}
 
 		Log.dec();
 	}
