@@ -90,47 +90,54 @@ public class Log
 
 	public static void hexDump(byte[] aBuffer)
 	{
-		hexDump(aBuffer, 32);
+		hexDump(aBuffer, 32, null);
 	}
 
 
-	public static void hexDump(byte[] aBuffer, int LW)
+	static void hexDump(byte[] aBuffer, int LW, byte[] aCompareWith)
 	{
-		int MR = 1000;
+		int MR = aBuffer.length;
 
 		StringBuilder binText = new StringBuilder("");
 		StringBuilder hexText = new StringBuilder("");
 
 		for (int row = 0, offset = 0; offset < aBuffer.length && row < MR; row++)
 		{
-			hexText.append(Console.Color.BLACK_LIGHT + String.format("%04d: ", row * LW) + Console.Color.RESET);
+			hexText.append("\033[1;30m" + String.format("%04d: ", row * LW) + "\033[0m");
 
 			int padding = 3 * LW + LW / 8;
+			String mode = "";
 
-			for (int i = 0; offset < aBuffer.length && i < LW; i++)
+			for (int i = 0; offset < aBuffer.length && i < LW; i++, offset++)
 			{
-				int c = 0xff & aBuffer[offset++];
+				int c = 0xff & aBuffer[offset];
 
-				if (!(c < ' ' || c >= 128))
+				String nextMode;
+				if (aCompareWith != null && c != (0xff & aCompareWith[offset]))
 				{
-					hexText.append(Console.Color.CYAN);
-					binText.append(Console.Color.CYAN);
+					nextMode = "\033[1;31m";
 				}
-				if (c >= '0' && c <= '9')
+				else if (c >= '0' && c <= '9')
 				{
-					hexText.append(Console.Color.MAGENTA);
-					binText.append(Console.Color.MAGENTA);
+					nextMode = "\033[0;35m";
+				}
+				else if (!(c < ' ' || c >= 128))
+				{
+					nextMode = "\033[0;36m";
+				}
+				else
+				{
+					nextMode = "\033[0m";
+				}
+				if (!nextMode.equals(mode))
+				{
+					mode = nextMode;
+					hexText.append(mode);
+					binText.append(mode);
 				}
 
 				hexText.append(String.format("%02x ", c));
 				binText.append(Character.isISOControl(c) ? '.' : (char)c);
-
-				if (c < ' ' || c >= 128 || c >= '0' && c <= '9')
-				{
-					hexText.append(Console.Color.RESET);
-					binText.append(Console.Color.RESET);
-				}
-
 
 				padding -= 3;
 
@@ -146,7 +153,7 @@ public class Log
 				hexText.append(" ");
 			}
 
-			System.out.println(hexText.append(binText).toString());
+			System.out.println(hexText + "\033[0m" + binText + "\033[0m");
 
 			binText.setLength(0);
 			hexText.setLength(0);
