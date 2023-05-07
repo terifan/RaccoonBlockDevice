@@ -70,7 +70,7 @@ public class Test
 				System.out.println("-".repeat(100));
 
 				Document db = dev.getMetadata().getDocument("directBlock");
-				int[] blockKey = db.getArray("blockKey").toInts();
+				int[] blockKey = db.getArray("blockKey").asInts();
 				long blockIndex = db.getLong("blockIndex");
 
 				byte[] in = new byte[4096 * 5];

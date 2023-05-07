@@ -289,8 +289,8 @@ public final class BlockPointer implements Serializable
 		if(adr.size()>1)setBlockIndex1(adr.getLong(1));
 		if(adr.size()>2)setBlockIndex2(adr.getLong(2));
 
-		setBlockKey(aDocument.getArray("key").toInts());
-		setChecksum(aDocument.getArray("chk").toInts());
+		setBlockKey(aDocument.getArray("key").asInts());
+		setChecksum(aDocument.getArray("chk").asInts());
 		return this;
 	}
 
@@ -333,8 +333,8 @@ public final class BlockPointer implements Serializable
 		if(ptr.size()>0)setBlockIndex0(ptr.getLong(0));
 		if(ptr.size()>1)setBlockIndex1(ptr.getLong(1));
 		if(ptr.size()>2)setBlockIndex2(ptr.getLong(2));
-		setBlockKey(aArray.getArray(9).toInts());
-		setChecksum(aArray.getArray(10).toInts());
+		setBlockKey(aArray.getArray(9).asInts());
+		setChecksum(aArray.getArray(10).asInts());
 		return this;
 	}
 
