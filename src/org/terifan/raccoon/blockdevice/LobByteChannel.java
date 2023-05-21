@@ -392,12 +392,16 @@ public class LobByteChannel implements SeekableByteChannel
 
 	public void delete()
 	{
-		for (BlockPointer bp : mBlockPointers)
+		if (mBlockPointers != null)
 		{
-			if (bp.getBlockType() != BlockType.HOLE)
+			for (BlockPointer bp : mBlockPointers)
 			{
-				mBlockAccessor.freeBlock(bp);
+				if (bp.getBlockType() != BlockType.HOLE)
+				{
+					mBlockAccessor.freeBlock(bp);
+				}
 			}
+			mBlockPointers.clear();
 		}
 
 		if (mIndirectBlockPointer != null)
@@ -406,13 +410,16 @@ public class LobByteChannel implements SeekableByteChannel
 		}
 
 		mTotalSize = 0;
-		mBlockPointers.clear();
 		mIndirectBlockPointer = null;
 		mPosition = 0;
-		Arrays.fill(mBuffer, (byte)0);
 		mModified = true;
 		mChunkModified = false;
 		mChunkIndex = 0;
+
+		if (mBuffer != null)
+		{
+			Arrays.fill(mBuffer, (byte)0);
+		}
 	}
 
 
