@@ -35,7 +35,7 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	private transient CipherImplementation mCipherImplementation;
 
 
-	public SecureBlockDevice(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice)
+	public SecureBlockDevice(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice) throws InvalidPasswordException
 	{
 		if (aBlockDevice == null)
 		{
@@ -100,6 +100,11 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 				}
 
 				Log.dec();
+			}
+
+			if (mCipherImplementation == null)
+			{
+				throw new InvalidPasswordException("Incorrect password or not a secure BlockDevice");
 			}
 		}
 	}
