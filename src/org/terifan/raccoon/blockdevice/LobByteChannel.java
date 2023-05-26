@@ -76,21 +76,21 @@ public class LobByteChannel implements SeekableByteChannel
 		Array pointers = mLobHeader.mData.getArray("pointers");
 		if (pointers != null && pointers.size() > 0)
 		{
-			BlockPointer tmp = new BlockPointer().unmarshalDoc(pointers.getDocument(0));
+			BlockPointer tmp = new BlockPointer().putAll(pointers.getDocument(0));
 
 			if (tmp.getBlockType() == BlockType.LOB_INDEX)
 			{
 				mIndirectBlockPointer = tmp;
 				for (Document doc : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(Document.class))
 				{
-					mBlockPointers.add(new BlockPointer().unmarshalDoc(doc));
+					mBlockPointers.add(new BlockPointer().putAll(doc));
 				}
 			}
 			else
 			{
 				for (Document data : pointers.iterable(Document.class))
 				{
-					mBlockPointers.add(new BlockPointer().unmarshalDoc(data));
+					mBlockPointers.add(new BlockPointer().putAll(data));
 				}
 			}
 		}
@@ -264,7 +264,7 @@ public class LobByteChannel implements SeekableByteChannel
 		for (int i = 0; i < mBlockPointers.size(); i++)
 		{
 			BlockPointer bp = mBlockPointers.get(i);
-			pointers.add(bp.marshalDoc());
+			pointers.add(bp);
 			if (LOG)
 			{
 				System.out.println("\tnew " + bp);
@@ -291,7 +291,7 @@ public class LobByteChannel implements SeekableByteChannel
 			mIndirectBlockPointer = mBlockAccessor.writeBlock(buf, 0, buf.length, BlockType.LOB_INDEX, 1, mInteriorBlockCompressor);
 
 			pointers.clear();
-			pointers.add(mIndirectBlockPointer.marshalDoc());
+			pointers.add(mIndirectBlockPointer);
 
 			Log.dec();
 		}

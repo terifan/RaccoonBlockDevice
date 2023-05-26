@@ -7,6 +7,7 @@ import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.random.ISAAC;
 
@@ -58,7 +59,6 @@ public class BlockAccessor implements AutoCloseable
 			mBlockDevice.freeBlock(aBlockPointer.getBlockIndex0(), aBlockPointer.getAllocatedSize() / mBlockDevice.getBlockSize());
 
 //			assert collectStatistics(FREE_BLOCK, aBlockPointer.getAllocatedSize());
-
 			Log.dec();
 		}
 		catch (Exception | Error e)
@@ -77,7 +77,7 @@ public class BlockAccessor implements AutoCloseable
 
 			byte[] buffer = new byte[aBlockPointer.getAllocatedSize()];
 
-			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey());
+			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey().asInts());
 
 			int[] hash;
 			if (aBlockPointer.getChecksumAlgorithm() == 0)
@@ -89,7 +89,7 @@ public class BlockAccessor implements AutoCloseable
 				throw new IOException("Unsupported checksum algorithm");
 			}
 
-			if (!aBlockPointer.verifyChecksum(hash))
+			if (!aBlockPointer.verifyChecksum(Array.of(hash)))
 			{
 				throw new IOException("Checksum error in block " + aBlockPointer);
 			}
@@ -107,7 +107,6 @@ public class BlockAccessor implements AutoCloseable
 			}
 
 //			assert collectStatistics(READ_BLOCK, buffer.length);
-
 			Log.dec();
 
 			return buffer;
@@ -163,18 +162,17 @@ public class BlockAccessor implements AutoCloseable
 				.setAllocatedSize(aBuffer.length)
 				.setPhysicalSize(physicalSize)
 				.setLogicalSize(aLength)
-				.setBlockIndex0(blockIndex)
+				.setAddress(Array.of(blockIndex))
 				.setBlockKey(createBlockKey())
-				.setChecksum(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getGeneration()))
+				.setChecksum(Array.of(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getGeneration())))
 				.setGeneration(mBlockDevice.getGeneration());
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();
 
-			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockPointer.getBlockKey());
+			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockPointer.getBlockKey().asInts());
 
 //			assert collectStatistics(WRITE_BLOCK, aBuffer.length);
-
 			Log.dec();
 
 			return blockPointer;
@@ -186,14 +184,9 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
-	private static int[] createBlockKey()
+	private static Array createBlockKey()
 	{
-		return new int[]{
-			PRNG.nextInt(),
-			PRNG.nextInt(),
-			PRNG.nextInt(),
-			PRNG.nextInt()
-		};
+		return Array.of(PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt());
 	}
 
 
