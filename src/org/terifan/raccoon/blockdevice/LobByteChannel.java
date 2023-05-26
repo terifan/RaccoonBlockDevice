@@ -74,23 +74,23 @@ public class LobByteChannel implements SeekableByteChannel
 		mBlockPointers = new ArrayList<>();
 
 		Array pointers = mLobHeader.mData.getArray("pointers");
-		if (pointers != null && pointers.size() > 0)
+		if (pointers != null && !pointers.isEmpty())
 		{
-			BlockPointer tmp = new BlockPointer().putAll(pointers.getDocument(0));
+			BlockPointer tmp = new BlockPointer(pointers.get(0));
 
 			if (tmp.getBlockType() == BlockType.LOB_INDEX)
 			{
 				mIndirectBlockPointer = tmp;
-				for (Document doc : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(Document.class))
+				for (Document data : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(Document.class))
 				{
-					mBlockPointers.add(new BlockPointer().putAll(doc));
+					mBlockPointers.add(new BlockPointer(data));
 				}
 			}
 			else
 			{
 				for (Document data : pointers.iterable(Document.class))
 				{
-					mBlockPointers.add(new BlockPointer().putAll(data));
+					mBlockPointers.add(new BlockPointer(data));
 				}
 			}
 		}

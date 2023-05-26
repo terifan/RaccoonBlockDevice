@@ -9,17 +9,29 @@ public final class BlockPointer extends Document
 {
 	private final static long serialVersionUID = 1;
 
-	private final static String OFS_FLAG_TYPE = "a";
-	private final static String OFS_FLAG_LEVEL = "b";
-	private final static String OFS_FLAG_CHECKSUM = "c";
-	private final static String OFS_FLAG_COMPRESSION = "d";
-	private final static String OFS_ALLOCATED_SIZE = "e";
-	private final static String OFS_LOGICAL_SIZE = "f";
-	private final static String OFS_PHYSICAL_SIZE = "g";
-	private final static String OFS_ADDRESS = "h";
-	private final static String OFS_GENERATION = "i";
-	private final static String OFS_BLOCK_KEY = "j";
-	private final static String OFS_CHECKSUM = "k";
+//	private final static int OFS_FLAG_TYPE = 0;
+//	private final static int OFS_FLAG_LEVEL = 1;
+//	private final static int OFS_FLAG_CHECKSUM = 2;
+//	private final static int OFS_FLAG_COMPRESSION = 3;
+//	private final static int OFS_ALLOCATED_SIZE = 4;
+//	private final static int OFS_LOGICAL_SIZE = 5;
+//	private final static int OFS_PHYSICAL_SIZE = 6;
+//	private final static int OFS_ADDRESS = 7;
+//	private final static int OFS_GENERATION = 8;
+//	private final static int OFS_BLOCK_KEY = 9;
+//	private final static int OFS_CHECKSUM = 10;
+
+	private final static String OFS_FLAG_TYPE = "0";
+	private final static String OFS_FLAG_LEVEL = "1";
+	private final static String OFS_FLAG_CHECKSUM = "2";
+	private final static String OFS_FLAG_COMPRESSION = "3";
+	private final static String OFS_ALLOCATED_SIZE = "4";
+	private final static String OFS_LOGICAL_SIZE = "5";
+	private final static String OFS_PHYSICAL_SIZE = "6";
+	private final static String OFS_ADDRESS = "7";
+	private final static String OFS_GENERATION = "8";
+	private final static String OFS_BLOCK_KEY = "9";
+	private final static String OFS_CHECKSUM = "10";
 
 //	private final static String OFS_FLAG_TYPE = "type";
 //	private final static String OFS_FLAG_LEVEL = "level";
@@ -37,6 +49,12 @@ public final class BlockPointer extends Document
 	public BlockPointer()
 	{
 		setAddress(Array.of(-1));
+	}
+
+
+	public BlockPointer(Document aArray)
+	{
+		putAll(aArray);
 	}
 
 
@@ -81,7 +99,7 @@ public final class BlockPointer extends Document
 
 	public int getCompressionAlgorithm()
 	{
-		return getInt(OFS_FLAG_COMPRESSION);
+		return get(OFS_FLAG_COMPRESSION, 0);
 	}
 
 
@@ -109,7 +127,7 @@ public final class BlockPointer extends Document
 
 	public int getLogicalSize()
 	{
-		return getInt(OFS_LOGICAL_SIZE);
+		return get(OFS_LOGICAL_SIZE, 0);
 	}
 
 
@@ -122,7 +140,7 @@ public final class BlockPointer extends Document
 
 	public int getPhysicalSize()
 	{
-		return getInt(OFS_PHYSICAL_SIZE);
+		return get(OFS_PHYSICAL_SIZE, 0);
 	}
 
 

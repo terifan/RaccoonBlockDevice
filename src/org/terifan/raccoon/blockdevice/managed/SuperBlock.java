@@ -84,7 +84,7 @@ class SuperBlock
 			mGeneration = marshaller.read();
 			mCreateTime = marshaller.read();
 			mChangedTime = marshaller.read();
-			mSpaceMapBlockPointer = new BlockPointer().putAll((Document)marshaller.read());
+			mSpaceMapBlockPointer = marshaller.read(BlockPointer.class);
 			Document metadata = marshaller.read();
 
 			return metadata;
