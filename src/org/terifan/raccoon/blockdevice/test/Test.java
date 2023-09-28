@@ -1,4 +1,4 @@
-package test;
+package org.terifan.raccoon.blockdevice.test;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
