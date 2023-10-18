@@ -76,7 +76,7 @@ public class MemoryBlockDevice implements PhysicalBlockDevice
 
 
 	@Override
-	public void commit(boolean aMetadata)
+	public void commit(int aIndex, boolean aMetadata)
 	{
 	}
 

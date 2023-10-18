@@ -1,8 +1,5 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.util.ByteArrayUtil;
-
-
 
 public interface BlockDevice extends AutoCloseable
 {
@@ -17,16 +14,6 @@ public interface BlockDevice extends AutoCloseable
 	 */
 	void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
 
-//	default void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
-//	{
-//		int[] blockKey = new int[4];
-//		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
-//		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
-//		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
-//		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
-//		readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
-//	}
-
 
 	/**
 	 * Write a single block to the device.
@@ -39,23 +26,13 @@ public interface BlockDevice extends AutoCloseable
 	 */
 	void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey);
 
-//	default void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, byte[] aBlockKey)
-//	{
-//		int[] blockKey = new int[4];
-//		blockKey[0] = ByteArrayUtil.getInt32(aBlockKey, 0);
-//		blockKey[1] = ByteArrayUtil.getInt32(aBlockKey, 4);
-//		blockKey[2] = ByteArrayUtil.getInt32(aBlockKey, 8);
-//		blockKey[3] = ByteArrayUtil.getInt32(aBlockKey, 12);
-//		writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, blockKey);
-//	}
-
 
 	/**
 	 * Attempt to flush any changes made to blocks
 	 *
 	 * @param aMetadata force update of metadata
 	 */
-	void commit(boolean aMetadata);
+	void commit(int aIndex, boolean aMetadata);
 
 
 	/**

@@ -254,9 +254,9 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 
 
 	@Override
-	public void commit(boolean aMetadata)
+	public void commit(int aIndex, boolean aMetadata)
 	{
-		mBlockDevice.commit(aMetadata);
+		mBlockDevice.commit(aIndex, aMetadata);
 	}
 
 

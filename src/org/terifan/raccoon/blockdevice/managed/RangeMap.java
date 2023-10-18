@@ -7,8 +7,8 @@ import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 
 public class RangeMap implements Cloneable
 {
-	private TreeMap<Integer, Integer> mMap;
-	private int mSpace;
+	private TreeMap<Long, Long> mMap;
+	private long mSpace;
 
 
 	public RangeMap()
@@ -18,23 +18,23 @@ public class RangeMap implements Cloneable
 	}
 
 
-	public synchronized void add(int aOffset, int aSize)
+	public synchronized void add(long aOffset, long aSize)
 	{
 		if (aOffset < 0 || aSize <= 0)
 		{
 			throw new IllegalArgumentException("Illegal range: offset: " + aOffset + ", size: " + aSize);
 		}
 
-		int start = aOffset;
-		int end = aOffset + aSize;
+		long start = aOffset;
+		long end = aOffset + aSize;
 
 		assert end > start : end + " > " + start;
 
-		Integer before = mMap.floorKey(start);
-		Integer after = mMap.ceilingKey(start);
+		Long before = mMap.floorKey(start);
+		Long after = mMap.ceilingKey(start);
 
-		Integer v1 = mMap.lowerKey(end);
-		Integer v2 = mMap.lowerKey(start);
+		Long v1 = mMap.lowerKey(end);
+		Long v2 = mMap.lowerKey(start);
 
 		if (v1 != null && v1 >= start)
 		{
@@ -69,7 +69,7 @@ public class RangeMap implements Cloneable
 	}
 
 
-	public synchronized void remove(int aOffset, int aSize)
+	public synchronized void remove(long aOffset, long aSize)
 	{
 		if (aSize <= 0)
 		{
@@ -80,17 +80,17 @@ public class RangeMap implements Cloneable
 			throw new IllegalArgumentException("Offset is negative: offset: " + aOffset);
 		}
 
-		int start = aOffset;
-		int end = aOffset + aSize;
+		long start = aOffset;
+		long end = aOffset + aSize;
 
-		Integer blockStart = mMap.floorKey(start);
+		Long blockStart = mMap.floorKey(start);
 
 		if (blockStart == null)
 		{
 			throw new IllegalArgumentException("No free block at offset: offset: " + start);
 		}
 
-		int blockEnd = mMap.get(blockStart);
+		long blockEnd = mMap.get(blockStart);
 
 		if (end > blockEnd)
 		{
@@ -123,9 +123,9 @@ public class RangeMap implements Cloneable
 	}
 
 
-	public synchronized int next(int aSize)
+	public synchronized long next(long aSize)
 	{
-		Entry<Integer, Integer> entry = mMap.firstEntry();
+		Entry<Long, Long> entry = mMap.firstEntry();
 
 		for (;;)
 		{
@@ -134,7 +134,7 @@ public class RangeMap implements Cloneable
 				return -1;
 			}
 
-			int offset = entry.getKey();
+			long offset = entry.getKey();
 
 			if (entry.getValue() - offset >= aSize)
 			{
@@ -148,25 +148,25 @@ public class RangeMap implements Cloneable
 	}
 
 
-	public synchronized int getFreeSpace()
+	public synchronized long getFreeSpace()
 	{
 		return mSpace;
 	}
 
 
-	public synchronized int getUsedSpace()
+	public synchronized long getUsedSpace()
 	{
 		return mMap.lastEntry().getValue() - mSpace;
 	}
 
 
-	public synchronized boolean isFree(int aOffset, int aSize)
+	public synchronized boolean isFree(long aOffset, long aSize)
 	{
-		Integer blockStart = mMap.floorKey(aOffset);
+		Long blockStart = mMap.floorKey(aOffset);
 
 		if (blockStart != null)
 		{
-			int blockEnd = mMap.get(blockStart) - 1;
+			long blockEnd = mMap.get(blockStart) - 1;
 
 			if (blockEnd >= aOffset + aSize || blockEnd >= aOffset)
 			{
@@ -191,7 +191,7 @@ public class RangeMap implements Cloneable
 		try
 		{
 			RangeMap map = (RangeMap)super.clone();
-			map.mMap = (TreeMap<Integer, Integer>)this.mMap.clone();
+			map.mMap = (TreeMap<Long, Long>)this.mMap.clone();
 			return map;
 		}
 		catch (CloneNotSupportedException e)
@@ -203,16 +203,16 @@ public class RangeMap implements Cloneable
 
 	public void marshal(ByteArrayBuffer aDataOutput)
 	{
-		int prev = 0;
+		long prev = 0;
 
-		aDataOutput.writeVar32(mMap.size());
+		aDataOutput.writeVar64U(mMap.size());
 
-		for (Entry<Integer, Integer> entry : mMap.entrySet())
+		for (Entry<Long, Long> entry : mMap.entrySet())
 		{
-			int index = entry.getKey();
+			long index = entry.getKey();
 
-			aDataOutput.writeVar32(entry.getValue() - index);
-			aDataOutput.writeVar32(index - prev);
+			aDataOutput.writeVar64U(entry.getValue() - index);
+			aDataOutput.writeVar64U(index - prev);
 
 			prev = index;
 		}
@@ -221,13 +221,13 @@ public class RangeMap implements Cloneable
 
 	public void unmarshal(ByteArrayBuffer aDataInput)
 	{
-		int size = aDataInput.readVar32();
+		long size = aDataInput.readVar64U();
 
-		for (int i = 0, prev = 0; i < size; i++)
+		for (long i = 0, prev = 0; i < size; i++)
 		{
-			int count = aDataInput.readVar32();
+			long count = aDataInput.readVar64U();
 
-			prev += aDataInput.readVar32();
+			prev += aDataInput.readVar64U();
 
 			add(prev, count);
 		}
@@ -238,7 +238,7 @@ public class RangeMap implements Cloneable
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder("{");
-		for (Entry<Integer, Integer> entry : mMap.entrySet())
+		for (Entry<Long, Long> entry : mMap.entrySet())
 		{
 			if (sb.length() > 1)
 			{
@@ -248,5 +248,11 @@ public class RangeMap implements Cloneable
 		}
 		sb.append("}");
 		return sb.toString();
+	}
+
+
+	long getLastBlockIndex()
+	{
+		return mMap.lastKey();
 	}
 }

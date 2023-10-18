@@ -9,14 +9,13 @@ import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
-import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.security.random.SecureRandom;
 
 
 class SpaceMap
 {
 	private final static SecureRandom PRNG = new SecureRandom();
-	private HashSet<Integer> mUncommittedAllocations;
+	private HashSet<Long> mUncommittedAllocations;
 	private RangeMap mPendingRangeMap;
 	private RangeMap mRangeMap;
 
@@ -26,7 +25,7 @@ class SpaceMap
 		mUncommittedAllocations = new HashSet<>();
 
 		mRangeMap = new RangeMap();
-		mRangeMap.add(0, Integer.MAX_VALUE);
+		mRangeMap.add(0, Long.MAX_VALUE);
 		mPendingRangeMap = mRangeMap.clone();
 	}
 
@@ -47,9 +46,9 @@ class SpaceMap
 	}
 
 
-	public int alloc(int aBlockCount)
+	public long alloc(long aBlockCount)
 	{
-		int blockIndex = mRangeMap.next(aBlockCount);
+		long blockIndex = mRangeMap.next(aBlockCount);
 
 		if (blockIndex < 0)
 		{
@@ -69,14 +68,14 @@ class SpaceMap
 	}
 
 
-	public void free(long aBlockIndex, int aBlockCount)
+	public void free(long aBlockIndex, long aBlockCount)
 	{
 		if (aBlockIndex < 0 || aBlockIndex + aBlockCount > Integer.MAX_VALUE)
 		{
 			throw new IllegalArgumentException();
 		}
 
-		int blockIndex = (int)aBlockIndex;
+		long blockIndex = aBlockIndex;
 
 		for (int i = 0; i < aBlockCount; i++)
 		{
@@ -90,7 +89,7 @@ class SpaceMap
 	}
 
 
-	public void assertUsed(long aBlockIndex, int aBlockCount)
+	public void assertUsed(long aBlockIndex, long aBlockCount)
 	{
 		if (!mRangeMap.isFree((int)aBlockIndex, aBlockCount))
 		{
@@ -120,7 +119,7 @@ class SpaceMap
 
 		if (aSpaceMapBlockPointer.getAllocatedSize() > 0)
 		{
-			aBlockDevice.freeBlockInternal(aSpaceMapBlockPointer.getAddress().getInt(0), aSpaceMapBlockPointer.getAllocatedSize() / blockSize);
+			aBlockDevice.freeBlockInternal(aSpaceMapBlockPointer.getBlockIndex0(), aSpaceMapBlockPointer.getAllocatedSize() / blockSize);
 		}
 
 		ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockSize);
@@ -135,12 +134,12 @@ class SpaceMap
 		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorLevel.NONE.ordinal());
 		aSpaceMapBlockPointer.setBlockType(BlockType.SPACEMAP);
 		aSpaceMapBlockPointer.setAllocatedSize(allocSize);
-		aSpaceMapBlockPointer.setAddress(Array.of(blockIndex));
+		aSpaceMapBlockPointer.setBlockIndex0(blockIndex);
 		aSpaceMapBlockPointer.setLogicalSize(buffer.position());
 		aSpaceMapBlockPointer.setPhysicalSize(buffer.position());
 		aSpaceMapBlockPointer.setChecksumAlgorithm((byte)0); // not used
-		aSpaceMapBlockPointer.setChecksum(Array.of(MurmurHash3.hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration())));
-		aSpaceMapBlockPointer.setBlockKey(Array.of(blockKey));
+		aSpaceMapBlockPointer.setChecksum(MurmurHash3.hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration()));
+		aSpaceMapBlockPointer.setBlockKey(blockKey);
 
 		// Pad buffer to block size
 		buffer.capacity(allocSize);
@@ -157,7 +156,7 @@ class SpaceMap
 	{
 		BlockPointer blockPointer = aSuperBlock.getSpaceMapPointer();
 
-		Log.d("read space map %d +%d (bytes used %d)", blockPointer.getAddress().getInt(0), blockPointer.getAllocatedSize() / aBlockDevice.getBlockSize(), blockPointer.getLogicalSize());
+		Log.d("read space map %d +%d (bytes used %d)", blockPointer.getBlockIndex0(), blockPointer.getAllocatedSize() / aBlockDevice.getBlockSize(), blockPointer.getLogicalSize());
 		Log.inc();
 
 		RangeMap rangeMap = new RangeMap();
@@ -169,18 +168,18 @@ class SpaceMap
 		}
 		else
 		{
-			if (blockPointer.getAddress().getLong(0) < 0)
+			if (blockPointer.getBlockIndex0() < 0)
 			{
-				throw new DeviceException("Block at illegal offset: " + blockPointer.getAddress().getLong(0));
+				throw new DeviceException("Block at illegal offset: " + blockPointer.getBlockIndex0());
 			}
 
 			int blockSize = aBlockDevice.getBlockSize();
 
 			ByteArrayBuffer buffer = ByteArrayBuffer.alloc(blockPointer.getAllocatedSize());
 
-			aBlockDeviceDirect.readBlock(blockPointer.getAddress().getLong(0), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey().asInts());
+			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey());
 
-			Array hash = Array.of(MurmurHash3.hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration()));
+			int[] hash = MurmurHash3.hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration());
 
 			if (!blockPointer.verifyChecksum(hash))
 			{
@@ -191,7 +190,7 @@ class SpaceMap
 
 			rangeMap.unmarshal(buffer);
 
-			rangeMap.remove(blockPointer.getAddress().getInt(0), blockPointer.getAllocatedSize() / blockSize);
+			rangeMap.remove((int)blockPointer.getBlockIndex0(), blockPointer.getAllocatedSize() / blockSize);
 		}
 
 		Log.dec();

@@ -11,7 +11,6 @@ import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
 import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.security.random.SecureRandom;
-import org.terifan.raccoon.blockdevice.LobHeader;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.document.Array;
@@ -42,15 +41,15 @@ public class Test
 				dev.writeBlock(blockIndex, directBlockData, 0, directBlockData.length, blockKey);
 				dev.getMetadata().put("directBlock", new Document().put("blockKey", Array.of(blockKey)).put("blockIndex", blockIndex));
 
-				LobHeader header = new LobHeader();
+				Document header = new Document();
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null, null))
 					{
 						lob.writeAllBytes(lobData);
 					}
 				}
-				dev.getMetadata().put("lob", header.marshal());
+				dev.getMetadata().put("lob", header);
 
 				dev.commit();
 			}
@@ -78,10 +77,10 @@ public class Test
 
 				System.out.println(Arrays.equals(in, directBlockData));
 
-				LobHeader header = new LobHeader(dev.getMetadata().getDocument("lob"));
+				Document header = dev.getMetadata().getDocument("lob");
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null, null))
 					{
 						byte[] data = lob.readAllBytes();
 						System.out.println(Arrays.equals(data, lobData));

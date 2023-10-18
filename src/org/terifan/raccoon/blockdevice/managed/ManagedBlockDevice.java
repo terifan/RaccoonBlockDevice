@@ -14,7 +14,6 @@ public class ManagedBlockDevice implements AutoCloseable
 	private int mBlockSize;
 	private boolean mModified;
 	private boolean mWasCreated;
-	private boolean mDoubleCommit;
 	private SpaceMap mSpaceMap;
 	private Document mMetadata;
 	private int mReservedBlocks;
@@ -33,10 +32,9 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		mPhysBlockDevice = aBlockDevice;
 		mBlockSize = aBlockDevice.getBlockSize();
-		mReservedBlocks = 2 * SuperBlock.BLOCK_SIZE / mBlockSize;
+		mReservedBlocks = 2;
 		mMetadata = new Document();
 		mWasCreated = mPhysBlockDevice.size() < mReservedBlocks;
-		mDoubleCommit = true;
 
 		init();
 	}
@@ -88,12 +86,6 @@ public class ManagedBlockDevice implements AutoCloseable
 		mSpaceMap = new SpaceMap(mSuperBlock, this, mPhysBlockDevice);
 
 		Log.dec();
-	}
-
-
-	public void setDoubleCommitEnabled(boolean aDoubleCommit)
-	{
-		mDoubleCommit = aDoubleCommit;
 	}
 
 
@@ -157,6 +149,8 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		if (mPhysBlockDevice != null)
 		{
+			mPhysBlockDevice.resize(mSpaceMap.getRangeMap().getLastBlockIndex());
+
 			mPhysBlockDevice.close();
 			mPhysBlockDevice = null;
 		}
@@ -185,7 +179,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	long allocBlockInternal(int aBlockCount)
+	long allocBlockInternal(long aBlockCount)
 	{
 		mModified = true;
 
@@ -304,16 +298,11 @@ public class ManagedBlockDevice implements AutoCloseable
 
 			mSpaceMap.write(mSuperBlock.getSpaceMapPointer(), this, mPhysBlockDevice);
 
-			if (mDoubleCommit) // enabled by default
-			{
-				// commit twice since write operations on disk may occur out of order ie. superblock may be written before spacemap even
-				// tough calls made in reverse order
-				mPhysBlockDevice.commit(false);
-			}
+			mPhysBlockDevice.commit(0, false);
 
 			writeSuperBlock();
 
-			mPhysBlockDevice.commit(aMetadata);
+			mPhysBlockDevice.commit(1, aMetadata);
 
 			mSpaceMap.reset();
 			mWasCreated = false;

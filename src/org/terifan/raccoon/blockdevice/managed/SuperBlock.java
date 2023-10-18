@@ -15,7 +15,6 @@ import org.terifan.raccoon.security.messagedigest.SHA3;
 class SuperBlock
 {
 	private final static int DIGEST_LENGTH = 64;
-	final static int BLOCK_SIZE = 4096;
 
 	private long mGeneration;
 	private long mCreateTime;
@@ -63,9 +62,9 @@ class SuperBlock
 
 	public Document read(PhysicalBlockDevice aBlockDevice, int aIndex) throws IOException
 	{
-		int blockIndex = aIndex * BLOCK_SIZE / aBlockDevice.getBlockSize();
+		int blockIndex = aIndex;
 
-		byte[] buffer = new byte[BLOCK_SIZE];
+		byte[] buffer = new byte[aBlockDevice.getBlockSize()];
 		aBlockDevice.readBlock(blockIndex, buffer, 0, buffer.length, createBlockKey(blockIndex));
 
 		SHA3 sha = new SHA3(512);
@@ -84,7 +83,7 @@ class SuperBlock
 			mGeneration = marshaller.read();
 			mCreateTime = marshaller.read();
 			mChangedTime = marshaller.read();
-			mSpaceMapBlockPointer = marshaller.read(BlockPointer.class);
+			mSpaceMapBlockPointer = new BlockPointer().unmarshal(marshaller.read());
 			Document metadata = marshaller.read();
 
 			return metadata;
@@ -94,7 +93,7 @@ class SuperBlock
 
 	public void write(PhysicalBlockDevice aBlockDevice, int aIndex, Document aMetadata) throws IOException
 	{
-		int blockIndex = aIndex * BLOCK_SIZE / aBlockDevice.getBlockSize();
+		int blockIndex = aIndex;
 
 		mChangedTime = System.currentTimeMillis();
 
@@ -104,18 +103,18 @@ class SuperBlock
 			marshaller.write(mGeneration);
 			marshaller.write(mCreateTime);
 			marshaller.write(mChangedTime);
-			marshaller.write(mSpaceMapBlockPointer);
+			marshaller.write(mSpaceMapBlockPointer.marshal());
 			marshaller.write(aMetadata);
 		}
 
 		byte[] buffer = baos.toByteArray();
 
-		if (buffer.length > BLOCK_SIZE - DIGEST_LENGTH)
+		if (buffer.length > aBlockDevice.getBlockSize() - DIGEST_LENGTH)
 		{
-			throw new DeviceException("Fatal error: SuperBlock serialized too larger than " + (BLOCK_SIZE - DIGEST_LENGTH) + " bytes: " + baos.size());
+			throw new DeviceException("Fatal error: SuperBlock serialized too larger than " + (aBlockDevice.getBlockSize() - DIGEST_LENGTH) + " bytes: " + baos.size());
 		}
 
-		buffer = Arrays.copyOfRange(buffer, 0, BLOCK_SIZE);
+		buffer = Arrays.copyOfRange(buffer, 0, aBlockDevice.getBlockSize());
 
 		SHA3 sha = new SHA3(512);
 		sha.update(buffer, 0, buffer.length - DIGEST_LENGTH);

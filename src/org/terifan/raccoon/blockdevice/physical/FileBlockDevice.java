@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.terifan.raccoon.blockdevice.DeviceException;
+import org.terifan.raccoon.blockdevice.managed.SyncMode;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
@@ -18,6 +19,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 	protected Path mPath;
 	protected FileChannel mFileChannel;
 	protected FileLock mFileLock;
+	protected SyncMode mSyncMode;
 	protected int mBlockSize;
 
 
@@ -27,25 +29,33 @@ public class FileBlockDevice implements PhysicalBlockDevice
 	}
 
 
+	public FileBlockDevice(Path aPath, int aBlockSize)
+	{
+		this(aPath, aBlockSize, false);
+	}
+
+
 	public FileBlockDevice(Path aPath, int aBlockSize, boolean aReadOnly)
 	{
+		mPath = aPath;
+		mBlockSize = aBlockSize;
+		mSyncMode = SyncMode.DOUBLE;
+
 		try
 		{
-			mPath = aPath;
-
 			if (aReadOnly)
 			{
-				mFileChannel = FileChannel.open(aPath, StandardOpenOption.CREATE, StandardOpenOption.READ);
+				mFileChannel = FileChannel.open(mPath, StandardOpenOption.CREATE, StandardOpenOption.READ);
 			}
 			else
 			{
 				try
 				{
-					mFileChannel = FileChannel.open(aPath, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+					mFileChannel = FileChannel.open(mPath, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
 				}
 				catch (AccessDeniedException e)
 				{
-					throw new FileAlreadyOpenException("Failed to open file: " + aPath, e);
+					throw new FileAlreadyOpenException("Failed to open file: " + mPath, e);
 				}
 
 				try
@@ -54,11 +64,9 @@ public class FileBlockDevice implements PhysicalBlockDevice
 				}
 				catch (IOException | OverlappingFileLockException e)
 				{
-					throw new FileAlreadyOpenException("Failed to lock file: " + aPath, e);
+					throw new FileAlreadyOpenException("Failed to lock file: " + mPath, e);
 				}
 			}
-
-			mBlockSize = aBlockSize;
 		}
 		catch (IOException e)
 		{
@@ -138,6 +146,18 @@ public class FileBlockDevice implements PhysicalBlockDevice
 
 		synchronized (this)
 		{
+			if (mSyncMode == SyncMode.ONCLOSE)
+			{
+				try
+				{
+					mFileChannel.force(true);
+				}
+				catch (IOException e)
+				{
+					throw new DeviceException(e);
+				}
+			}
+
 			if (mFileLock != null)
 			{
 				try
@@ -194,17 +214,20 @@ public class FileBlockDevice implements PhysicalBlockDevice
 
 
 	@Override
-	public void commit(boolean aMetadata)
+	public void commit(int aIndex, boolean aMetadata)
 	{
 		Log.d("commit");
 
-		try
+		if (aIndex == 0 && mSyncMode != SyncMode.OFF || aIndex == 1 && mSyncMode == SyncMode.DOUBLE)
 		{
-			mFileChannel.force(aMetadata);
-		}
-		catch (IOException e)
-		{
-			throw new DeviceException(e);
+			try
+			{
+				mFileChannel.force(aMetadata);
+			}
+			catch (IOException e)
+			{
+				throw new DeviceException(e);
+			}
 		}
 	}
 
@@ -227,5 +250,18 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		{
 			throw new DeviceException(e);
 		}
+	}
+
+
+	public FileBlockDevice setSyncMode(SyncMode aSyncMode)
+	{
+		mSyncMode = aSyncMode;
+		return this;
+	}
+
+
+	public SyncMode getSyncMode()
+	{
+		return mSyncMode;
 	}
 }

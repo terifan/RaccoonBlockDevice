@@ -12,15 +12,20 @@ import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.document.Document;
+import org.terifan.raccoon.document.ObjectId;
 
 
 public class LobByteChannel implements SeekableByteChannel
 {
 	private final static boolean LOG = false;
 
+	public static final String BLOCK_SIZE = "block";
+	public static final String TOTAL_SIZE = "size";
+	public static final String POINTERS = "pointers";
+
 	private final static int INDIRECT_POINTER_THRESHOLD = 4;
 
-	private LobHeader mLobHeader;
+	private Document mHeader;
 	private BlockAccessor mBlockAccessor;
 	private ArrayList<BlockPointer> mBlockPointers;
 	private boolean mClosed;
@@ -35,34 +40,35 @@ public class LobByteChannel implements SeekableByteChannel
 	private CompressorLevel mLeafBlockCompressor;
 	private BlockPointer mIndirectBlockPointer;
 	private Runnable mCloseAction;
+	private Document mMetadata;
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, LobHeader aLobHeader, LobOpenOption aOpenOption) throws IOException
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aLobHeader, LobOpenOption aOpenOption, Document aContainer, Runnable aCloseAction) throws IOException
 	{
-		this(aBlockAccessor, aLobHeader, aOpenOption, ()->{});
-	}
+		if (aLobHeader == null)
+		{
+			throw new IllegalArgumentException();
+		}
 
-
-	public LobByteChannel(BlockAccessor aBlockAccessor, LobHeader aLobHeader, LobOpenOption aOpenOption, Runnable aCloseAction) throws IOException
-	{
-		mLobHeader = aLobHeader;
+		mHeader = aLobHeader;
 		mBlockAccessor = aBlockAccessor;
-		mCloseAction = aCloseAction;
+		mCloseAction = aCloseAction == null ? ()->{} : aCloseAction;
 
-		mInteriorBlockCompressor = CompressorLevel.ZLE;
+		if (aContainer != null)
+		{
+			mMetadata = aContainer.get("$meta", () -> new Document());
+			aContainer.put("$meta", mMetadata);
+		}
+
+		mInteriorBlockCompressor = CompressorLevel.NONE;
 		mLeafBlockCompressor = CompressorLevel.NONE;
 
-		if (aOpenOption == LobOpenOption.REPLACE && aLobHeader != null)
+		if (aOpenOption == LobOpenOption.REPLACE)
 		{
 			delete();
 		}
 
-		if (mLobHeader.mData == null)
-		{
-			mLobHeader.mData = new Document();
-		}
-
-		mLeafBlockSize = mLobHeader.mData.get("blockSize", 1 << 20);
+		mLeafBlockSize = mHeader.get(BLOCK_SIZE, 1 << 20);
 
 		if ((mLeafBlockSize & (mLeafBlockSize - 1)) != 0)
 		{
@@ -70,27 +76,27 @@ public class LobByteChannel implements SeekableByteChannel
 		}
 
 		mBuffer = new byte[mLeafBlockSize];
-		mTotalSize = mLobHeader.mData.get("totalSize", 0L);
+		mTotalSize = mHeader.get(TOTAL_SIZE, 0L);
 		mBlockPointers = new ArrayList<>();
 
-		Array pointers = mLobHeader.mData.getArray("pointers");
+		Array pointers = mHeader.getArray(POINTERS);
 		if (pointers != null && !pointers.isEmpty())
 		{
-			BlockPointer tmp = new BlockPointer(pointers.get(0));
+			BlockPointer tmp = new BlockPointer().unmarshal(pointers.get(0));
 
 			if (tmp.getBlockType() == BlockType.LOB_INDEX)
 			{
 				mIndirectBlockPointer = tmp;
-				for (Document data : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(Document.class))
+				for (byte[] data : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(byte[].class))
 				{
-					mBlockPointers.add(new BlockPointer(data));
+					mBlockPointers.add(new BlockPointer().unmarshal(data));
 				}
 			}
 			else
 			{
-				for (Document data : pointers.iterable(Document.class))
+				for (byte[] data : pointers.iterable(byte[].class))
 				{
-					mBlockPointers.add(new BlockPointer(data));
+					mBlockPointers.add(new BlockPointer().unmarshal(data));
 				}
 			}
 		}
@@ -264,7 +270,7 @@ public class LobByteChannel implements SeekableByteChannel
 		for (int i = 0; i < mBlockPointers.size(); i++)
 		{
 			BlockPointer bp = mBlockPointers.get(i);
-			pointers.add(bp);
+			pointers.add(bp.marshal());
 			if (LOG)
 			{
 				System.out.println("\tnew " + bp);
@@ -291,12 +297,13 @@ public class LobByteChannel implements SeekableByteChannel
 			mIndirectBlockPointer = mBlockAccessor.writeBlock(buf, 0, buf.length, BlockType.LOB_INDEX, 1, mInteriorBlockCompressor);
 
 			pointers.clear();
-			pointers.add(mIndirectBlockPointer);
+			pointers.add(mIndirectBlockPointer.marshal());
 
 			Log.dec();
 		}
 
-		mLobHeader.mData = new Document().put("totalSize", mTotalSize).put("blockSize", mLeafBlockSize).put("pointers", pointers);
+		mHeader.put(TOTAL_SIZE, mTotalSize).put(BLOCK_SIZE, mLeafBlockSize).put(POINTERS, pointers);
+
 		mClosed = true;
 
 		if (mCloseAction != null)
@@ -304,6 +311,14 @@ public class LobByteChannel implements SeekableByteChannel
 			mCloseAction.run();
 			mCloseAction = null;
 		}
+
+		mBlockAccessor = null;
+		mBlockPointers = null;
+		mCloseAction = null;
+		mBuffer = null;
+		mHeader = null;
+		mIndirectBlockPointer = null;
+		mMetadata = null;
 
 		Log.dec();
 	}
@@ -607,6 +622,12 @@ public class LobByteChannel implements SeekableByteChannel
 	private int posInChunk()
 	{
 		return (int)(mPosition & (mLeafBlockSize - 1));
+	}
+
+
+	public Document getMetadata()
+	{
+		return mMetadata;
 	}
 
 //	void scan(ScanResult aScanResult)

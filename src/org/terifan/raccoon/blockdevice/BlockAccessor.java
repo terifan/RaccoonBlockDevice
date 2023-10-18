@@ -77,7 +77,7 @@ public class BlockAccessor implements AutoCloseable
 
 			byte[] buffer = new byte[aBlockPointer.getAllocatedSize()];
 
-			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey().asInts());
+			mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), buffer, 0, buffer.length, aBlockPointer.getBlockKey());
 
 			int[] hash;
 			if (aBlockPointer.getChecksumAlgorithm() == 0)
@@ -89,7 +89,7 @@ public class BlockAccessor implements AutoCloseable
 				throw new IOException("Unsupported checksum algorithm");
 			}
 
-			if (!aBlockPointer.verifyChecksum(Array.of(hash)))
+			if (!aBlockPointer.verifyChecksum(hash))
 			{
 				throw new IOException("Checksum error in block " + aBlockPointer);
 			}
@@ -162,15 +162,15 @@ public class BlockAccessor implements AutoCloseable
 				.setAllocatedSize(aBuffer.length)
 				.setPhysicalSize(physicalSize)
 				.setLogicalSize(aLength)
-				.setAddress(Array.of(blockIndex))
+				.setBlockIndex0(blockIndex)
 				.setBlockKey(createBlockKey())
-				.setChecksum(Array.of(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getGeneration())))
+				.setChecksum(MurmurHash3.hash128(aBuffer, 0, physicalSize, mBlockDevice.getGeneration()))
 				.setGeneration(mBlockDevice.getGeneration());
 
 			Log.d("write block %s", blockPointer);
 			Log.inc();
 
-			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockPointer.getBlockKey().asInts());
+			mBlockDevice.writeBlock(blockIndex, aBuffer, 0, aBuffer.length, blockPointer.getBlockKey());
 
 //			assert collectStatistics(WRITE_BLOCK, aBuffer.length);
 			Log.dec();
@@ -184,9 +184,9 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
-	private static Array createBlockKey()
+	private static int[] createBlockKey()
 	{
-		return Array.of(PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt());
+		return new int[]{PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt(), PRNG.nextInt()};
 	}
 
 

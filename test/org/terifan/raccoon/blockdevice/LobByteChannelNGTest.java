@@ -51,33 +51,32 @@ public class LobByteChannelNGTest
 //		try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false)))
 		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
 		{
-			LobHeader header = new LobHeader();
-			header.mData = new Document();
-			header.mData.put("blockSize", aBlockSize);
+			Document header = new Document();
+			header.put("blockSize", aBlockSize);
 			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 			{
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE))
+				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null, null))
 				{
 					lob.writeAllBytes(chunk1);
 					lob.writeAllBytes(chunk2);
 					lob.writeAllBytes(chunk3);
 				}
 			}
-			dev.getMetadata().put("lob", header.marshal());
+			dev.getMetadata().put("lob", header);
 			dev.commit();
 		}
 
 //		try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false)))
 		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
 		{
-			LobHeader header = new LobHeader(dev.getMetadata().getDocument("lob"));
+			Document header = dev.getMetadata().getDocument("lob");
 			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 			{
 				byte[] tmp1 = new byte[aLengths[0]];
 				byte[] tmp2 = new byte[aLengths[1]];
 				byte[] tmp3 = new byte[aLengths[2]];
 
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null, null))
 				{
 					lob.read(ByteBuffer.wrap(tmp1));
 					lob.read(ByteBuffer.wrap(tmp2));

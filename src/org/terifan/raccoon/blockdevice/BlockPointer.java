@@ -1,123 +1,94 @@
 package org.terifan.raccoon.blockdevice;
 
+import java.util.Arrays;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
+import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt64;
 import org.terifan.raccoon.blockdevice.util.Console;
-import org.terifan.raccoon.document.Array;
-import org.terifan.raccoon.document.Document;
-import org.terifan.raccoon.document.DocumentEntity;
-import org.terifan.raccoon.document.Marshallable;
 
 
-public final class BlockPointer extends Document //implements Marshallable
+public final class BlockPointer
 {
-	private final static long serialVersionUID = 1;
+	private final static int OFS_FLAG_TYPE = 0;			// 1
+	private final static int OFS_FLAG_LEVEL = 1;		// 1
+	private final static int OFS_FLAG_CHECKSUM = 2;		// 1
+	private final static int OFS_FLAG_COMPRESSION = 3;	// 1
+	private final static int OFS_ALLOCATED_SIZE = 4;	// 4
+	private final static int OFS_LOGICAL_SIZE = 8;		// 4
+	private final static int OFS_PHYSICAL_SIZE = 12;	// 4
+	private final static int OFS_BLOCK_INDEX_0 = 16;	// 8
+	private final static int OFS_BLOCK_INDEX_1 = 24;	// 8
+	private final static int OFS_BLOCK_INDEX_2 = 32;	// 8
+	private final static int OFS_GENERATION = 40;		// 8
+	private final static int OFS_BLOCK_KEY = 48;		// 16
+	private final static int OFS_CHECKSUM = 64;			// 16
 
-//	private final static int OFS_FLAG_TYPE = 0;
-//	private final static int OFS_FLAG_LEVEL = 1;
-//	private final static int OFS_FLAG_CHECKSUM = 2;
-//	private final static int OFS_FLAG_COMPRESSION = 3;
-//	private final static int OFS_ALLOCATED_SIZE = 4;
-//	private final static int OFS_LOGICAL_SIZE = 5;
-//	private final static int OFS_PHYSICAL_SIZE = 6;
-//	private final static int OFS_ADDRESS = 7;
-//	private final static int OFS_GENERATION = 8;
-//	private final static int OFS_BLOCK_KEY = 9;
-//	private final static int OFS_SIGNATURE = 10;
-
-//	private final static String OFS_FLAG_TYPE = "0";
-//	private final static String OFS_FLAG_LEVEL = "1";
-//	private final static String OFS_FLAG_CHECKSUM = "2";
-//	private final static String OFS_FLAG_COMPRESSION = "3";
-//	private final static String OFS_ALLOCATED_SIZE = "4";
-//	private final static String OFS_LOGICAL_SIZE = "5";
-//	private final static String OFS_PHYSICAL_SIZE = "6";
-//	private final static String OFS_ADDRESS = "7";
-//	private final static String OFS_GENERATION = "8";
-//	private final static String OFS_BLOCK_KEY = "9";
-//	private final static String OFS_SIGNATURE = "10";
-
-	private final static String OFS_FLAG_TYPE = "blk";
-	private final static String OFS_FLAG_LEVEL = "lvl";
-	private final static String OFS_FLAG_CHECKSUM = "chk";
-	private final static String OFS_FLAG_COMPRESSION = "cmp";
-	private final static String OFS_ALLOCATED_SIZE = "alo";
-	private final static String OFS_LOGICAL_SIZE = "log";
-	private final static String OFS_PHYSICAL_SIZE = "phy";
-	private final static String OFS_ADDRESS = "adr";
-	private final static String OFS_GENERATION = "gen";
-	private final static String OFS_BLOCK_KEY = "key";
-	private final static String OFS_SIGNATURE = "sig";
-
-//	private Document mDocument = new Document();
-	private Document mDocument = this;
+	private final byte[] mBuffer;
 
 
 	public BlockPointer()
 	{
-		setAddress(Array.of(-1));
-	}
-
-
-	public BlockPointer(Document aArray)
-	{
-		mDocument.putAll(aArray);
+		mBuffer = new byte[80];
+		setBlockIndex0(-1);
 	}
 
 
 	public int getBlockType()
 	{
-		return mDocument.get(OFS_FLAG_TYPE, BlockType.FREE);
+		return mBuffer[OFS_FLAG_TYPE];
 	}
 
 
 	public BlockPointer setBlockType(int aBlockType)
 	{
-		mDocument.put(OFS_FLAG_TYPE, aBlockType);
+		mBuffer[OFS_FLAG_TYPE] = (byte)aBlockType;
 		return this;
 	}
 
 
 	public int getBlockLevel()
 	{
-		return mDocument.get(OFS_FLAG_LEVEL, 0);
+		return mBuffer[OFS_FLAG_LEVEL];
 	}
 
 
 	public BlockPointer setBlockLevel(int aLevel)
 	{
-		mDocument.put(OFS_FLAG_LEVEL, aLevel);
+		mBuffer[OFS_FLAG_LEVEL] = (byte)aLevel;
 		return this;
 	}
 
 
 	public int getChecksumAlgorithm()
 	{
-		return mDocument.get(OFS_FLAG_CHECKSUM, 0);
+		return mBuffer[OFS_FLAG_CHECKSUM];
 	}
 
 
 	public BlockPointer setChecksumAlgorithm(int aChecksumAlgorithm)
 	{
-		mDocument.put(OFS_FLAG_CHECKSUM, aChecksumAlgorithm);
+		mBuffer[OFS_FLAG_CHECKSUM] = (byte)aChecksumAlgorithm;
 		return this;
 	}
 
 
 	public int getCompressionAlgorithm()
 	{
-		return mDocument.get(OFS_FLAG_COMPRESSION, 0);
+		return mBuffer[OFS_FLAG_COMPRESSION];
 	}
 
 
 	public BlockPointer setCompressionAlgorithm(int aCompressionAlgorithm)
 	{
-		mDocument.put(OFS_FLAG_COMPRESSION, aCompressionAlgorithm);
+		mBuffer[OFS_FLAG_COMPRESSION] = (byte)aCompressionAlgorithm;
 		return this;
 	}
 
 
 	public int getAllocatedSize()
 	{
-		return mDocument.get(OFS_ALLOCATED_SIZE, 0);
+		return getInt32(mBuffer, OFS_ALLOCATED_SIZE);
 	}
 
 
@@ -125,109 +96,156 @@ public final class BlockPointer extends Document //implements Marshallable
 	{
 		assert aAllocBlocks >= 0;
 
-		mDocument.put(OFS_ALLOCATED_SIZE, aAllocBlocks);
+		putInt32(mBuffer, OFS_ALLOCATED_SIZE, aAllocBlocks);
 		return this;
 	}
 
 
 	public int getLogicalSize()
 	{
-		return mDocument.get(OFS_LOGICAL_SIZE, 0);
+		return getInt32(mBuffer, OFS_LOGICAL_SIZE);
 	}
 
 
 	public BlockPointer setLogicalSize(int aLogicalSize)
 	{
-		mDocument.put(OFS_LOGICAL_SIZE, aLogicalSize);
+		putInt32(mBuffer, OFS_LOGICAL_SIZE, aLogicalSize);
 		return this;
 	}
 
 
 	public int getPhysicalSize()
 	{
-		return mDocument.get(OFS_PHYSICAL_SIZE, 0);
+		return getInt32(mBuffer, OFS_PHYSICAL_SIZE);
 	}
 
 
 	public BlockPointer setPhysicalSize(int aPhysicalSize)
 	{
-		mDocument.put(OFS_PHYSICAL_SIZE, aPhysicalSize);
+		putInt32(mBuffer, OFS_PHYSICAL_SIZE, aPhysicalSize);
 		return this;
 	}
 
 
-	public Array getBlockKey()
+	public int[] getBlockKey()
 	{
-		return mDocument.getArray(OFS_BLOCK_KEY);
+		return new int[]
+		{
+			getInt32(mBuffer, OFS_BLOCK_KEY),
+			getInt32(mBuffer, OFS_BLOCK_KEY + 4),
+			getInt32(mBuffer, OFS_BLOCK_KEY + 8),
+			getInt32(mBuffer, OFS_BLOCK_KEY + 12)
+		};
 	}
 
 
-	public BlockPointer setBlockKey(Array aBlockKey)
+	public BlockPointer setBlockKey(int[] aBlockKey)
 	{
-		mDocument.put(OFS_BLOCK_KEY, aBlockKey);
+		putInt32(mBuffer, OFS_BLOCK_KEY, aBlockKey[0]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 4, aBlockKey[1]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 8, aBlockKey[2]);
+		putInt32(mBuffer, OFS_BLOCK_KEY + 12, aBlockKey[3]);
 		return this;
 	}
 
 
-	public Array getAddress()
+	public long getBlockIndex0()
 	{
-		return mDocument.getArray(OFS_ADDRESS);
+		return getInt64(mBuffer, OFS_BLOCK_INDEX_0);
 	}
 
 
-	public BlockPointer setAddress(Array aAddress)
+	public BlockPointer setBlockIndex0(long aBlockIndex)
 	{
-		mDocument.put(OFS_ADDRESS, aAddress);
+		putInt64(mBuffer, OFS_BLOCK_INDEX_0, aBlockIndex);
+		return this;
+	}
+
+
+	public long getBlockIndex1()
+	{
+		return getInt64(mBuffer, OFS_BLOCK_INDEX_1);
+	}
+
+
+	public BlockPointer setBlockIndex1(long aBlockIndex)
+	{
+		putInt64(mBuffer, OFS_BLOCK_INDEX_1, aBlockIndex);
+		return this;
+	}
+
+
+	public long getBlockIndex2()
+	{
+		return getInt64(mBuffer, OFS_BLOCK_INDEX_2);
+	}
+
+
+	public BlockPointer setBlockIndex2(long aBlockIndex)
+	{
+		putInt64(mBuffer, OFS_BLOCK_INDEX_2, aBlockIndex);
 		return this;
 	}
 
 
 	public long getGeneration()
 	{
-		return mDocument.get(OFS_GENERATION, 0L);
+		return getInt64(mBuffer, OFS_GENERATION);
 	}
 
 
 	public BlockPointer setGeneration(long aGeneration)
 	{
-		mDocument.put(OFS_GENERATION, aGeneration);
+		putInt64(mBuffer, OFS_GENERATION, aGeneration);
 		return this;
 	}
 
 
-	public Array getChecksum()
+	public int[] getChecksum()
 	{
-		return mDocument.getArray(OFS_SIGNATURE);
+		return new int[]
+		{
+			getInt32(mBuffer, OFS_CHECKSUM),
+			getInt32(mBuffer, OFS_CHECKSUM + 4),
+			getInt32(mBuffer, OFS_CHECKSUM + 8),
+			getInt32(mBuffer, OFS_CHECKSUM + 12)
+		};
 	}
 
 
-	public BlockPointer setChecksum(Array aChecksum)
+	public BlockPointer setChecksum(int[] aChecksum)
 	{
-		mDocument.put(OFS_SIGNATURE, aChecksum);
+		putInt32(mBuffer, OFS_CHECKSUM, aChecksum[0]);
+		putInt32(mBuffer, OFS_CHECKSUM + 4, aChecksum[1]);
+		putInt32(mBuffer, OFS_CHECKSUM + 8, aChecksum[2]);
+		putInt32(mBuffer, OFS_CHECKSUM + 12, aChecksum[3]);
 		return this;
 	}
 
 
-	public boolean verifyChecksum(Array aChecksum)
+	public boolean verifyChecksum(int[] aChecksum)
 	{
-		return aChecksum.equals(mDocument.getArray(OFS_SIGNATURE));
+		return Arrays.equals(getChecksum(), aChecksum);
 	}
 
 
 	@Override
 	public int hashCode()
 	{
-		return Long.hashCode(mDocument.getLong(OFS_ADDRESS));
+		return Arrays.hashCode(mBuffer);
 	}
 
 
 	@Override
 	public boolean equals(Object aBlockPointer)
 	{
-		if (aBlockPointer instanceof BlockPointer)
+		if (aBlockPointer == this)
 		{
-			BlockPointer other = (BlockPointer)aBlockPointer;
-			return other.getAddress().get(0).equals(getAddress().get(0));
+			return true;
+		}
+		if (aBlockPointer instanceof BlockPointer v)
+		{
+			return Arrays.equals(mBuffer, v.mBuffer);
 		}
 		return false;
 	}
@@ -236,26 +254,19 @@ public final class BlockPointer extends Document //implements Marshallable
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%d, level=%d, address=%s, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getAddress(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration());
+		return Console.format("{type=%d, level=%d, block=%s, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration());
 	}
 
 
-	public long getBlockIndex0()
+	public byte[] marshal()
 	{
-		return getAddress().get(0, -1L);
+		return mBuffer;
 	}
 
 
-//	@Override
-//	public DocumentEntity marshal()
-//	{
-//		return mDocument;
-//	}
-//
-//
-//	@Override
-//	public void unmarshal(DocumentEntity aDocumentEntity)
-//	{
-//		mDocument = (Document)aDocumentEntity;
-//	}
+	public BlockPointer unmarshal(byte[] aDocument)
+	{
+		System.arraycopy(aDocument, 0, mBuffer, 0, mBuffer.length);
+		return this;
+	}
 }
