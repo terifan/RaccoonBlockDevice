@@ -55,7 +55,7 @@ public class LobByteChannelNGTest
 			header.put("blockSize", aBlockSize);
 			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 			{
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null, null))
+				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null))
 				{
 					lob.writeAllBytes(chunk1);
 					lob.writeAllBytes(chunk2);
@@ -76,7 +76,7 @@ public class LobByteChannelNGTest
 				byte[] tmp2 = new byte[aLengths[1]];
 				byte[] tmp3 = new byte[aLengths[2]];
 
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null, null))
+				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null))
 				{
 					lob.read(ByteBuffer.wrap(tmp1));
 					lob.read(ByteBuffer.wrap(tmp2));

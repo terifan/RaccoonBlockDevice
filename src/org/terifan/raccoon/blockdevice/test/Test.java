@@ -44,7 +44,7 @@ public class Test
 				Document header = new Document();
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null, null))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null))
 					{
 						lob.writeAllBytes(lobData);
 					}
@@ -80,7 +80,7 @@ public class Test
 				Document header = dev.getMetadata().getDocument("lob");
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null, null))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null))
 					{
 						byte[] data = lob.readAllBytes();
 						System.out.println(Arrays.equals(data, lobData));
