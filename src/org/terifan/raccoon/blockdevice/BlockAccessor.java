@@ -7,7 +7,6 @@ import org.terifan.raccoon.blockdevice.compressor.Compressor;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.random.ISAAC;
 
@@ -53,6 +52,11 @@ public class BlockAccessor implements AutoCloseable
 	{
 		try
 		{
+			if (aBlockPointer.getPhysicalSize() == 0)
+			{
+				return;
+			}
+
 			Log.d("free block %s", aBlockPointer);
 			Log.inc();
 
@@ -74,7 +78,7 @@ public class BlockAccessor implements AutoCloseable
 		{
 			Log.d("read block %s", aBlockPointer);
 
-			if (aBlockPointer.getBlockType() == BlockType.HOLE)
+			if (aBlockPointer.getPhysicalSize() == 0)
 			{
 				return new byte[aBlockPointer.getLogicalSize()];
 			}
@@ -129,7 +133,6 @@ public class BlockAccessor implements AutoCloseable
 		if (isAllZeros(aBuffer, aOffset, aLength))
 		{
 			BlockPointer bp = new BlockPointer()
-				.setBlockType(BlockType.HOLE)
 				.setBlockLevel(aBlockLevel)
 				.setLogicalSize(aLength)
 				.setBlockIndex0(0)

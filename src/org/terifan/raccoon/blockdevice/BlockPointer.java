@@ -10,6 +10,8 @@ import org.terifan.raccoon.blockdevice.util.Console;
 
 public final class BlockPointer
 {
+	public final static int SIZE = 80;
+
 	private final static int OFS_FLAG_TYPE = 0;			// 1
 	private final static int OFS_FLAG_LEVEL = 1;		// 1
 	private final static int OFS_FLAG_CHECKSUM = 2;		// 1
@@ -29,7 +31,7 @@ public final class BlockPointer
 
 	public BlockPointer()
 	{
-		mBuffer = new byte[80];
+		mBuffer = new byte[SIZE];
 		setBlockIndex0(-1);
 	}
 

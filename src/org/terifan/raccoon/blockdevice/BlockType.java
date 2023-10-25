@@ -4,8 +4,10 @@ package org.terifan.raccoon.blockdevice;
 public interface BlockType
 {
 	int FREE = 0;
-	int SPACEMAP = 1;
-	int LOB_INDEX = 2;
-	int LOB_LEAF = 3;
-	int HOLE = 4;
+	int TREE_NODE = 1;
+	int TREE_LEAF = 2;
+	int LOB_NODE = 3;
+	int LOB_LEAF = 4;
+	int ILLEGAL = 5;
+	int SPACEMAP = 6;
 }

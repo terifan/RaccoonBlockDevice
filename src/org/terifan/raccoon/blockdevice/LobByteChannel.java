@@ -9,6 +9,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.document.Array;
@@ -19,11 +20,16 @@ public class LobByteChannel implements SeekableByteChannel
 {
 	private final static boolean LOG = false;
 
-	public static final String LENGTH = "len";
-	public static final String BLOCK_SIZE = "blk";
-	public static final String POINTERS = "ptr";
+	private final static String LENGTH = "0";
+	private final static String BLOCK_SIZE = "1";
+	private final static String POINTERS = "2";
+	private final static String METADATA = "3";
 
-	private final static int INDIRECT_POINTER_THRESHOLD = 4;
+	private final static int INDIRECT_PTR_THRESHOLD = 4;
+
+	public final static String METADATA_MODIFIED = "$modified";
+	public final static String METADATA_CREATED = "$created";
+	public final static String METADATA_LENGTH = "$length";
 
 	private Document mHeader;
 	private BlockAccessor mBlockAccessor;
@@ -38,10 +44,18 @@ public class LobByteChannel implements SeekableByteChannel
 	private int mLeafBlockSize;
 	private CompressorLevel mCompressor;
 	private BlockPointer mIndirectBlockPointer;
-	private Runnable mCloseAction;
+	private Consumer<LobByteChannel> mCloseAction;
+	private int mIndirectPointerThreshold;
+	private boolean mWriteMetadata;
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Runnable aCloseAction) throws IOException
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction) throws IOException
+	{
+		this(aBlockAccessor, aHeader, aOpenOption, aCloseAction, INDIRECT_PTR_THRESHOLD, true);
+	}
+
+
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction, int aIndirectPointerThreshold, boolean aWriteMetadata) throws IOException
 	{
 		if (aHeader == null)
 		{
@@ -50,8 +64,10 @@ public class LobByteChannel implements SeekableByteChannel
 
 		mHeader = aHeader;
 		mBlockAccessor = aBlockAccessor;
-		mCloseAction = aCloseAction == null ? ()->{} : aCloseAction;
+		mCloseAction = aCloseAction == null ? e->{} : aCloseAction;
 		mCompressor = CompressorLevel.NONE;
+		mIndirectPointerThreshold = aIndirectPointerThreshold;
+		mWriteMetadata = aWriteMetadata;
 
 		if (aOpenOption == LobOpenOption.REPLACE)
 		{
@@ -65,7 +81,14 @@ public class LobByteChannel implements SeekableByteChannel
 			throw new IllegalArgumentException("BlockSize must be power of 2: " + mLeafBlockSize);
 		}
 
-		getMetadata().computeIfAbsent("$props", () -> new Document().put("created", LocalDateTime.now()).put("modified", LocalDateTime.now()).put("length", 0));
+		if (mWriteMetadata)
+		{
+			LocalDateTime now = LocalDateTime.now();
+			getMetadata()
+				.putIfAbsent(METADATA_CREATED, () -> now)
+				.putIfAbsent(METADATA_MODIFIED, () -> now)
+				.putIfAbsent(METADATA_LENGTH, () -> mLength);
+		}
 
 		mBuffer = new byte[mLeafBlockSize];
 		mLength = mHeader.get(LENGTH, 0L);
@@ -76,7 +99,7 @@ public class LobByteChannel implements SeekableByteChannel
 		{
 			BlockPointer tmp = new BlockPointer().unmarshal(pointers.get(0));
 
-			if (tmp.getBlockType() == BlockType.LOB_INDEX)
+			if (tmp.getBlockType() == BlockType.LOB_NODE)
 			{
 				mIndirectBlockPointer = tmp;
 				for (byte[] data : new Array().fromByteArray(mBlockAccessor.readBlock(mIndirectBlockPointer)).iterable(byte[].class))
@@ -280,13 +303,13 @@ public class LobByteChannel implements SeekableByteChannel
 			Log.dec();
 		}
 
-		if (mBlockPointers.size() > INDIRECT_POINTER_THRESHOLD)
+		if (mBlockPointers.size() > mIndirectPointerThreshold)
 		{
 			Log.d("created indirect lob pointer block");
 			Log.inc();
 
 			byte[] buf = pointers.toByteArray();
-			mIndirectBlockPointer = mBlockAccessor.writeBlock(buf, 0, buf.length, BlockType.LOB_INDEX, 1, CompressorLevel.NONE);
+			mIndirectBlockPointer = mBlockAccessor.writeBlock(buf, 0, buf.length, BlockType.LOB_NODE, 1, CompressorLevel.ZLE);
 
 			pointers.clear();
 			pointers.add(mIndirectBlockPointer.marshal());
@@ -296,15 +319,19 @@ public class LobByteChannel implements SeekableByteChannel
 
 		mHeader.put(LENGTH, mLength).put(BLOCK_SIZE, mLeafBlockSize).put(POINTERS, pointers);
 
-		Document meta = getMetadata().computeIfAbsent("$props", () -> new Document().put("created", LocalDateTime.now()));
-		meta.put("modified", LocalDateTime.now());
-		meta.put("length", mLength);
+		if (mWriteMetadata)
+		{
+			getMetadata()
+				.putIfAbsent(METADATA_CREATED, LocalDateTime::now)
+				.put(METADATA_MODIFIED, LocalDateTime.now())
+				.put(METADATA_LENGTH, mLength);
+		}
 
 		mClosed = true;
 
 		if (mCloseAction != null)
 		{
-			mCloseAction.run();
+			mCloseAction.accept(this);
 		}
 
 		mBlockAccessor = null;
@@ -364,7 +391,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 				BlockPointer bp = mChunkIndex >= mBlockPointers.size() ? null : mBlockPointers.get(mChunkIndex);
 
-				if (bp != null && bp.getBlockType() != BlockType.HOLE)
+				if (bp != null)
 				{
 					if (LOG)
 					{
@@ -385,10 +412,7 @@ public class LobByteChannel implements SeekableByteChannel
 		{
 			for (BlockPointer bp : mBlockPointers)
 			{
-				if (bp.getBlockType() != BlockType.HOLE)
-				{
-					mBlockAccessor.freeBlock(bp);
-				}
+				mBlockAccessor.freeBlock(bp);
 			}
 			mBlockPointers.clear();
 		}
@@ -404,6 +428,7 @@ public class LobByteChannel implements SeekableByteChannel
 		mModified = true;
 		mChunkModified = false;
 		mChunkIndex = 0;
+		mClosed = true;
 
 		if (mBuffer != null)
 		{
@@ -417,6 +442,14 @@ public class LobByteChannel implements SeekableByteChannel
 		ByteBuffer buf = ByteBuffer.allocate((int)size());
 		read(buf);
 		return buf.array();
+	}
+
+
+	public byte[] readAllBytes(byte[] aBuffer) throws IOException
+	{
+		ByteBuffer buf = ByteBuffer.wrap(aBuffer);
+		read(buf);
+		return aBuffer;
 	}
 
 
@@ -599,9 +632,13 @@ public class LobByteChannel implements SeekableByteChannel
 	}
 
 
+	/**
+	 * @return the metadata Document with information that is stored along with the LOB. Fields with "$" prefix will be updated by the
+	 * implementation.
+	 */
 	public Document getMetadata()
 	{
-		return mHeader.computeIfAbsent("metadata", () -> new Document());
+		return mHeader.computeIfAbsent(METADATA, () -> new Document());
 	}
 
 //	void scan(ScanResult aScanResult)
