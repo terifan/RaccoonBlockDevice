@@ -10,7 +10,7 @@ public class BlockPointerNGTest
 	public void testSomeMethod()
 	{
 		BlockPointer bp = new BlockPointer()
-			.setBlockType(0)
+			.setBlockType(BlockType.BTREE_NODE)
 			.setBlockLevel(1)
 			.setChecksumAlgorithm(2)
 			.setCompressionAlgorithm(3)

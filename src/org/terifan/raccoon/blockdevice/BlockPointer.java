@@ -36,15 +36,15 @@ public final class BlockPointer
 	}
 
 
-	public int getBlockType()
+	public BlockType getBlockType()
 	{
-		return mBuffer[OFS_FLAG_TYPE];
+		return BlockType.values()[mBuffer[OFS_FLAG_TYPE]];
 	}
 
 
-	public BlockPointer setBlockType(int aBlockType)
+	public BlockPointer setBlockType(BlockType aBlockType)
 	{
-		mBuffer[OFS_FLAG_TYPE] = (byte)aBlockType;
+		mBuffer[OFS_FLAG_TYPE] = (byte)aBlockType.ordinal();
 		return this;
 	}
 
@@ -256,7 +256,7 @@ public final class BlockPointer
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%d, level=%d, block=%s, alloc=%d, phys=%d, logic=%d, tx=%d}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration());
+		return Console.format("{type=%s, level=%d, index=%s, alloc=%d, phys=%d, logic=%d, gen=%d, chk=%08x}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), 0xffffffffL & getChecksum()[0]);
 	}
 
 

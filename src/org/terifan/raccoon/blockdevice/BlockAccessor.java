@@ -50,13 +50,13 @@ public class BlockAccessor implements AutoCloseable
 
 	public synchronized void freeBlock(BlockPointer aBlockPointer)
 	{
+		if (aBlockPointer == null || aBlockPointer.getPhysicalSize() == 0)
+		{
+			return;
+		}
+
 		try
 		{
-			if (aBlockPointer.getPhysicalSize() == 0)
-			{
-				return;
-			}
-
 			Log.d("free block %s", aBlockPointer);
 			Log.inc();
 
@@ -76,7 +76,7 @@ public class BlockAccessor implements AutoCloseable
 	{
 		try
 		{
-			Log.d("read block %s", aBlockPointer);
+			Log.d("read block  %s", aBlockPointer);
 
 			if (aBlockPointer.getPhysicalSize() == 0)
 			{
@@ -128,16 +128,20 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
-	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aBlockType, int aBlockLevel, CompressorLevel aCompressorLevel)
+	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, BlockType aBlockType, int aBlockLevel, CompressorLevel aCompressorLevel)
 	{
 		if (isAllZeros(aBuffer, aOffset, aLength))
 		{
-			BlockPointer bp = new BlockPointer()
+			BlockPointer blockPointer = new BlockPointer()
+				.setBlockType(aBlockType)
 				.setBlockLevel(aBlockLevel)
 				.setLogicalSize(aLength)
 				.setBlockIndex0(0)
 				.setGeneration(mBlockDevice.getGeneration());
-			return bp;
+
+			Log.d("write block %s", blockPointer);
+
+			return blockPointer;
 		}
 
 		BlockPointer blockPointer = null;

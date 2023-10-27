@@ -150,7 +150,6 @@ public class ManagedBlockDevice implements AutoCloseable
 		if (mPhysBlockDevice != null)
 		{
 			mPhysBlockDevice.resize(mSpaceMap.getRangeMap().getLastBlockIndex());
-
 			mPhysBlockDevice.close();
 			mPhysBlockDevice = null;
 		}

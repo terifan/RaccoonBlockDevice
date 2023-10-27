@@ -2,11 +2,8 @@ package org.terifan.raccoon.blockdevice;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Random;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
 import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.util.LogLevel;
@@ -17,6 +14,37 @@ import org.testng.annotations.Test;
 
 public class LobByteChannelNGTest
 {
+	@Test
+	public void testSomeMethod1() throws IOException
+	{
+		Log.setLevel(LogLevel.DEBUG);
+
+		MemoryBlockDevice memoryBlockDevice = new MemoryBlockDevice(512);
+
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
+		{
+			Document header = new Document();
+			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
+			{
+				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null))
+				{
+					byte[] data = new byte[1024];
+					new Random().nextBytes(data);
+					lob.writeAllBytes(data);
+					lob.position(1024 * 1024 + 1024);
+					lob.writeAllBytes(data);
+				}
+			}
+
+			dev.getMetadata().put("lob", header);
+			dev.commit();
+		}
+
+		System.out.println(memoryBlockDevice.size());
+//		memoryBlockDevice.dump();
+	}
+
+
 	@Test(enabled = false)
 	public void testSomeMethod() throws IOException
 	{

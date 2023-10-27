@@ -20,12 +20,14 @@ public class LobByteChannel implements SeekableByteChannel
 {
 	private final static boolean LOG = false;
 
+	public final static int DEFAULT_LEAF_SIZE = 0x100000;
+
 	private final static String LENGTH = "0";
 	private final static String BLOCK_SIZE = "1";
 	private final static String POINTERS = "2";
 	private final static String METADATA = "3";
 
-	private final static int INDIRECT_PTR_THRESHOLD = 4;
+	private final static int INDIRECT_PTR_THRESHOLD = 3;
 
 	public final static String METADATA_MODIFIED = "$modified";
 	public final static String METADATA_CREATED = "$created";
@@ -51,11 +53,11 @@ public class LobByteChannel implements SeekableByteChannel
 
 	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction) throws IOException
 	{
-		this(aBlockAccessor, aHeader, aOpenOption, aCloseAction, INDIRECT_PTR_THRESHOLD, true);
+		this(aBlockAccessor, aHeader, aOpenOption, aCloseAction, INDIRECT_PTR_THRESHOLD, true, DEFAULT_LEAF_SIZE);
 	}
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction, int aIndirectPointerThreshold, boolean aWriteMetadata) throws IOException
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction, int aIndirectPointerThreshold, boolean aWriteMetadata, int aLeafBlockSize) throws IOException
 	{
 		if (aHeader == null)
 		{
@@ -74,7 +76,7 @@ public class LobByteChannel implements SeekableByteChannel
 			delete();
 		}
 
-		mLeafBlockSize = mHeader.get(BLOCK_SIZE, 1 << 20);
+		mLeafBlockSize = mHeader.get(BLOCK_SIZE, () -> {int bs = mBlockAccessor.getBlockDevice().getBlockSize(); return aLeafBlockSize / bs * bs;});
 
 		if ((mLeafBlockSize & (mLeafBlockSize - 1)) != 0)
 		{
@@ -365,14 +367,11 @@ public class LobByteChannel implements SeekableByteChannel
 
 				BlockPointer bp = mChunkIndex >= mBlockPointers.size() ? null : mBlockPointers.get(mChunkIndex);
 
-				if (bp != null)
-				{
-					mBlockAccessor.freeBlock(bp);
-				}
+				mBlockAccessor.freeBlock(bp);
 
 				bp = mBlockAccessor.writeBlock(mBuffer, 0, len, BlockType.LOB_LEAF, 0, mCompressor);
 
-				if (mChunkIndex == mBlockPointers.size())
+				if (mChunkIndex >= mBlockPointers.size())
 				{
 					mBlockPointers.add(bp);
 				}
@@ -417,10 +416,7 @@ public class LobByteChannel implements SeekableByteChannel
 			mBlockPointers.clear();
 		}
 
-		if (mIndirectBlockPointer != null)
-		{
-			mBlockAccessor.freeBlock(mIndirectBlockPointer);
-		}
+		mBlockAccessor.freeBlock(mIndirectBlockPointer);
 
 		mLength = 0;
 		mIndirectBlockPointer = null;

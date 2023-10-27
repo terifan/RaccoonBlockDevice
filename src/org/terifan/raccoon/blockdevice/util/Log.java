@@ -94,7 +94,7 @@ public class Log
 	}
 
 
-	static void hexDump(byte[] aBuffer, int LW, byte[] aCompareWith)
+	public static void hexDump(byte[] aBuffer, int LW, byte[] aCompareWith)
 	{
 		int MR = aBuffer.length;
 

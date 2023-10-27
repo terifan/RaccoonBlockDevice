@@ -116,12 +116,29 @@ public class MemoryBlockDevice implements PhysicalBlockDevice
 	}
 
 
+	@Override
+	public String toString()
+	{
+		return "MemoryBlockDevice{blockSize=" + mBlockSize + ", count=" + mStorage.size() + ", range=[" + mStorage.firstKey() + ", " + mStorage.lastKey() + "]}";
+	}
+
+
 	public void dump()
 	{
 		for (Entry<Long,byte[]> entry : mStorage.entrySet())
 		{
 			Log.out.println("Block #" + entry.getKey() + ":");
 			Log.hexDump(entry.getValue());
+		}
+	}
+
+
+	public void dump(int aWidth)
+	{
+		for (Entry<Long,byte[]> entry : mStorage.entrySet())
+		{
+			Log.out.println("Block #" + entry.getKey() + ":");
+			Log.hexDump(entry.getValue(), aWidth, null);
 		}
 	}
 }
