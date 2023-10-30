@@ -23,19 +23,60 @@ public class Test
 {
 	public static void main(String ... args)
 	{
-		for (int i = 10; i <= 10; i++)
+		try
+		{
+//			Log.setLevel(LogLevel.DEBUG);
+			Random rnd = new Random(1);
+			byte[] output = new byte[10000];
+			rnd.nextBytes(output);
+
+			MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
+
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+			{
+				Document header = new Document();
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, 1, false, 16384))
+				{
+					lob.writeAllBytes(output);
+				}
+				dev.getMetadata().put("lob", header);
+				dev.commit();
+			}
+
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+			{
+				Document header = dev.getMetadata().get("lob");
+
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				{
+					byte[] input = lob.readAllBytes();
+					System.out.println(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
+				}
+			}
+		}
+		catch (Throwable e)
+		{
+			e.printStackTrace(System.out);
+		}
+	}
+
+	public static void xxmain(String... args)
+	{
+		for (int i = 4; i <= 4; i++)
 		{
 			run(i);
 		}
 	}
+
+
 	public static void run(int aIndex)
 	{
 		try
 		{
 //			Log.setLevel(LogLevel.DEBUG);
-			Random rnd = new Random(1);
-//			byte[] buffer = new byte[10_000_000];
-			byte[] buffer = new byte[10000 + aIndex*1000];
+			Random rnd = new Random(aIndex);
+//			byte[] output = new byte[10_000_000];
+			byte[] output = new byte[10000];
 			int bufferLength = 0;
 
 			MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
@@ -43,9 +84,9 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null, 1, false, 512))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, 1, false, 512))
 				{
-					for (int i = 0; i < aIndex; i++)
+					for (int i = 0; i < 1; i++)
 					{
 //						if ((i%1000)==0)System.out.println(i);
 						byte[] data = new byte[1 + rnd.nextInt(10_000)];
@@ -54,9 +95,9 @@ public class Test
 						{
 							rnd.nextBytes(data);
 						}
-						lob.position(rnd.nextInt(buffer.length - data.length));
+						lob.position(rnd.nextInt(output.length - data.length));
 //						System.out.println("WRITE " + lob.position() + " +" + data.length + " " + (text?"text":"zero"));
-						System.arraycopy(data, 0, buffer, (int)lob.position(), data.length);
+						System.arraycopy(data, 0, output, (int)lob.position(), data.length);
 						lob.writeAllBytes(data);
 						bufferLength = Math.max(bufferLength, (int)lob.position());
 					}
@@ -66,22 +107,21 @@ public class Test
 			}
 
 //			System.out.println(blockDevice);
-			Log.setLevel(LogLevel.DEBUG);
+//			Log.setLevel(LogLevel.DEBUG);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
-			{
-				Document header = dev.getMetadata().get("lob");
-
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
-				{
-					byte[] data = lob.readAllBytes();
-					System.out.println(Arrays.equals(data, Arrays.copyOfRange(buffer,0,bufferLength))?"data identical":"data missmatch");
-//					Log.hexDump(data, 64, buffer);
-				}
-			}
+//			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+//			{
+//				Document header = dev.getMetadata().get("lob");
+//
+//				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+//				{
+//					byte[] input = lob.readAllBytes();
+//					System.out.println(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
+//					Log.diffDump(input, 32, Arrays.copyOfRange(output, 0, input.length));
+//				}
+//			}
 
 //			System.out.println();
-
 //			blockDevice.dump(64);
 		}
 		catch (Throwable e)
@@ -91,7 +131,7 @@ public class Test
 	}
 
 
-	public static void xmain(String ... args)
+	public static void xmain(String... args)
 	{
 		try
 		{
@@ -107,7 +147,7 @@ public class Test
 			rnd.nextBytes(lobData);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -117,7 +157,7 @@ public class Test
 				Document header = new Document();
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE))
 					{
 						lob.writeAllBytes(lobData);
 					}
@@ -128,9 +168,8 @@ public class Test
 			}
 
 //			Log.setLevel(LogLevel.DEBUG);
-
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"),512,false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());
@@ -153,7 +192,7 @@ public class Test
 				Document header = dev.getMetadata().getDocument("lob");
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ))
 					{
 						byte[] data = lob.readAllBytes();
 						System.out.println(Arrays.equals(data, lobData));

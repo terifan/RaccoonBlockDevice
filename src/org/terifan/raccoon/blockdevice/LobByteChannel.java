@@ -16,9 +16,19 @@ import org.terifan.raccoon.document.Array;
 import org.terifan.raccoon.document.Document;
 
 
+// lob pointer		version, block size, length, compression, [ptr]
+// lob directory	[ptr][ptr][ptr][...][...][...][...][...][ptr][ptr][...][...][...][ptr][...][ptr]
+// lob blocks		##### ##### ##### ##### ##### ##### #####
+
+// 1024*1024*1024 / 1048576 =   1024 * 80 =     81,920
+// 1024*1024*1024 /  262144 =   4096 * 80 =    327,680
+// 1024*1024*1024 /   65536 =  16384 * 80 =  1,310,720
+// 1024*1024*1024 /   16384 =  65536 * 80 =  5,242,880
+// 1024*1024*1024 /    4096 = 262144 * 80 = 20,971,520
+
 public class LobByteChannel implements SeekableByteChannel
 {
-	private final static boolean LOG = false;
+	private final static boolean LOG = !false;
 
 	public final static int DEFAULT_LEAF_SIZE = 0x100000;
 
@@ -51,13 +61,14 @@ public class LobByteChannel implements SeekableByteChannel
 	private boolean mWriteMetadata;
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction) throws IOException
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption) throws IOException
 	{
-		this(aBlockAccessor, aHeader, aOpenOption, aCloseAction, INDIRECT_PTR_THRESHOLD, true, DEFAULT_LEAF_SIZE);
+		this(aBlockAccessor, aHeader, aOpenOption, INDIRECT_PTR_THRESHOLD, true, DEFAULT_LEAF_SIZE);
 	}
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Consumer<LobByteChannel> aCloseAction, int aIndirectPointerThreshold, boolean aWriteMetadata, int aLeafBlockSize) throws IOException
+	@Deprecated
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, int aIndirectPointerThreshold, boolean aWriteMetadata, int aLeafBlockSize) throws IOException
 	{
 		if (aHeader == null)
 		{
@@ -66,7 +77,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 		mHeader = aHeader;
 		mBlockAccessor = aBlockAccessor;
-		mCloseAction = aCloseAction == null ? e->{} : aCloseAction;
+		mCloseAction = e->{};
 		mCompressor = CompressorLevel.NONE;
 		mIndirectPointerThreshold = aIndirectPointerThreshold;
 		mWriteMetadata = aWriteMetadata;
@@ -126,6 +137,13 @@ public class LobByteChannel implements SeekableByteChannel
 		{
 			mChunkIndex = -1; // force sync to load the block at mPosition
 		}
+	}
+
+
+	public LobByteChannel setCloseAction(Consumer<LobByteChannel> aCloseAction)
+	{
+		mCloseAction = aCloseAction == null ? e->{} : aCloseAction;
+		return this;
 	}
 
 
@@ -351,7 +369,7 @@ public class LobByteChannel implements SeekableByteChannel
 	{
 		if (LOG)
 		{
-			System.out.println("\tsync pos: " + mPosition + ", size: " + mLength + ", final: " + aFinal + ", posChunk: " + posInChunk() + ", indexChunk:" + mPosition / mLeafBlockSize + ", mod: " + mChunkModified);
+			System.out.println("\tSync pos: " + mPosition + ", size: " + mLength + ", final: " + aFinal + ", posChunk: " + posInChunk() + ", indexChunk:" + mPosition / mLeafBlockSize + ", mod: " + mChunkModified);
 		}
 
 		if (posInChunk() == 0 || mChunkIndex != mPosition / mLeafBlockSize || aFinal)
@@ -362,7 +380,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 				if (LOG)
 				{
-					System.out.println("\tWriting chunk " + mChunkIndex + " " + len + " bytes");
+					System.out.println("\tWrite chunk " + mChunkIndex + ", " + len + " bytes");
 				}
 
 				BlockPointer bp = mChunkIndex >= mBlockPointers.size() ? null : mBlockPointers.get(mChunkIndex);
@@ -394,7 +412,7 @@ public class LobByteChannel implements SeekableByteChannel
 				{
 					if (LOG)
 					{
-						System.out.println("\tReading chunk " + mChunkIndex);
+						System.out.println("\tRead chunk " + mChunkIndex);
 					}
 
 					byte[] tmp = mBlockAccessor.readBlock(bp);

@@ -148,10 +148,7 @@ public class Log
 				}
 			}
 
-			for (int i = 0; i < padding; i++)
-			{
-				hexText.append(" ");
-			}
+			hexText.append(" ".repeat(padding));
 
 			System.out.println(hexText + "\033[0m" + binText + "\033[0m");
 
@@ -175,5 +172,90 @@ public class Log
 	public static String toString(byte[] aValue)
 	{
 		return aValue == null ? null : new String(aValue, Charset.defaultCharset());
+	}
+
+
+	public static void diffDump(byte[] aBuffer1, int LW, byte[] aBuffer2)
+	{
+		int MR = aBuffer1.length;
+
+		StringBuilder binText1 = new StringBuilder("");
+		StringBuilder hexText1 = new StringBuilder("");
+		StringBuilder binText2 = new StringBuilder("");
+		StringBuilder hexText2 = new StringBuilder("");
+
+		int len = Math.max(aBuffer1.length, aBuffer2.length);
+
+		for (int row = 0, xoffset = 0; xoffset < len && row < MR; row++, xoffset+=LW)
+		{
+			hexText1.append("\033[1;30m" + String.format("%05d: ", row * LW) + "\033[0m");
+
+			int padding = 3 * LW + LW / 8;
+			String mode = "";
+			String output = "";
+
+			for (int i = 0, offset = xoffset; offset < len && i < LW; i++, offset++)
+			{
+				int ch = offset >= aBuffer1.length ? 0 : 0xff & aBuffer1[offset];
+				int dh = offset >= aBuffer2.length ? 0 : 0xff & aBuffer2[offset];
+
+				if (offset >= aBuffer1.length || offset >= aBuffer2.length)
+				{
+					if (mode != null)
+					{
+						mode = null;
+						String cl = "\033[0;36m";
+						if (offset >= aBuffer1.length)
+						{
+							hexText1.append(cl);
+							binText1.append(cl);
+						}
+						else
+						{
+							hexText2.append(cl);
+							binText2.append(cl);
+						}
+					}
+				}
+				else
+				{
+					String nextMode = ch != dh ? "\033[1;31m" : "\033[0m";
+					if (!nextMode.equals(mode))
+					{
+						mode = nextMode;
+						hexText1.append(mode);
+						binText1.append(mode);
+						hexText2.append(mode);
+						binText2.append(mode);
+					}
+				}
+
+				hexText1.append(String.format("%02x ", ch));
+				binText1.append(ch >= 32 && ch < 128 ? (char)ch : '.');
+				hexText2.append(String.format("%02x ", dh));
+				binText2.append(dh >= 32 && dh < 128 ? (char)dh : '.');
+
+				padding -= 3;
+
+				if ((i & 7) == 7)
+				{
+					hexText1.append(" ");
+					hexText2.append(" ");
+					padding--;
+				}
+			}
+
+			hexText1.append("\033[0m").append(" ".repeat(padding));
+			hexText2.append("\033[0m").append(" ".repeat(padding));
+
+			output += hexText1 + "" + binText1 + "\033[0m" + (" ".repeat(Math.max(0,padding/3))) + "    " + hexText2 + "" + binText2 + "\033[0m";
+
+			binText1.setLength(0);
+			hexText1.setLength(0);
+			binText2.setLength(0);
+			hexText2.setLength(0);
+
+			System.out.println(output);
+		}
 	}
 }
