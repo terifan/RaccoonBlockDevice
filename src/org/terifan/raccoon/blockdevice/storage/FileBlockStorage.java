@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice.physical;
+package org.terifan.raccoon.blockdevice.storage;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -9,12 +9,12 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import org.terifan.raccoon.blockdevice.DeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.managed.SyncMode;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
-public class FileBlockDevice implements PhysicalBlockDevice
+public class FileBlockStorage implements BlockStorage
 {
 	protected Path mPath;
 	protected FileChannel mFileChannel;
@@ -23,19 +23,19 @@ public class FileBlockDevice implements PhysicalBlockDevice
 	protected int mBlockSize;
 
 
-	public FileBlockDevice(Path aPath)
+	public FileBlockStorage(Path aPath)
 	{
 		this(aPath, 4096, false);
 	}
 
 
-	public FileBlockDevice(Path aPath, int aBlockSize)
+	public FileBlockStorage(Path aPath, int aBlockSize)
 	{
 		this(aPath, aBlockSize, false);
 	}
 
 
-	public FileBlockDevice(Path aPath, int aBlockSize, boolean aReadOnly)
+	public FileBlockStorage(Path aPath, int aBlockSize, boolean aReadOnly)
 	{
 		mPath = aPath;
 		mBlockSize = aBlockSize;
@@ -70,7 +70,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -85,7 +85,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -100,7 +100,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -117,7 +117,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -134,7 +134,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -154,7 +154,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 				}
 				catch (IOException e)
 				{
-					throw new DeviceException(e);
+					throw new RaccoonDeviceException(e);
 				}
 			}
 
@@ -180,7 +180,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 				}
 				catch (IOException e)
 				{
-					throw new DeviceException(e);
+					throw new RaccoonDeviceException(e);
 				}
 				mFileChannel = null;
 			}
@@ -208,7 +208,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
@@ -226,7 +226,7 @@ public class FileBlockDevice implements PhysicalBlockDevice
 			}
 			catch (IOException e)
 			{
-				throw new DeviceException(e);
+				throw new RaccoonDeviceException(e);
 			}
 		}
 	}
@@ -248,12 +248,12 @@ public class FileBlockDevice implements PhysicalBlockDevice
 		}
 		catch (IOException e)
 		{
-			throw new DeviceException(e);
+			throw new RaccoonDeviceException(e);
 		}
 	}
 
 
-	public FileBlockDevice setSyncMode(SyncMode aSyncMode)
+	public FileBlockStorage setSyncMode(SyncMode aSyncMode)
 	{
 		mSyncMode = aSyncMode;
 		return this;

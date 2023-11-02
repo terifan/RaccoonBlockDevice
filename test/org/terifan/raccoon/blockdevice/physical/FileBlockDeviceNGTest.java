@@ -1,6 +1,6 @@
 package org.terifan.raccoon.blockdevice.physical;
 
-import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.FileBlockStorage;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ public class FileBlockDeviceNGTest
 
 		for (int k = 0; k < 5; k++)
 		{
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(file, s, false)))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockStorage(file, s, false)))
 			{
 				for (int j = 0; j < 10; j++)
 				{

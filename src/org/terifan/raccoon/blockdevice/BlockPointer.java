@@ -1,6 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
 import java.util.Arrays;
+import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
@@ -36,15 +37,15 @@ public final class BlockPointer
 	}
 
 
-	public BlockType getBlockType()
+	public int getBlockType()
 	{
-		return BlockType.values()[mBuffer[OFS_FLAG_TYPE]];
+		return mBuffer[OFS_FLAG_TYPE];
 	}
 
 
-	public BlockPointer setBlockType(BlockType aBlockType)
+	public BlockPointer setBlockType(int aBlockType)
 	{
-		mBuffer[OFS_FLAG_TYPE] = (byte)aBlockType.ordinal();
+		mBuffer[OFS_FLAG_TYPE] = (byte)aBlockType;
 		return this;
 	}
 
@@ -225,12 +226,6 @@ public final class BlockPointer
 	}
 
 
-	public boolean verifyChecksum(int[] aChecksum)
-	{
-		return Arrays.equals(getChecksum(), aChecksum);
-	}
-
-
 	@Override
 	public int hashCode()
 	{
@@ -256,7 +251,7 @@ public final class BlockPointer
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%s, level=%d, index=%s, alloc=%d, phys=%d, logic=%d, gen=%d, chk=%08x}", getBlockType(), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), 0xffffffffL & getChecksum()[0]);
+		return Console.format("{type=%s, level=%d, index=%d, alloc=%d, phys=%d, logic=%d, gen=%d, cmp=%d, chk=%d:%08x}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), getCompressionAlgorithm(), getChecksumAlgorithm(), 0xffffffffL & getChecksum()[0]);
 	}
 
 
@@ -269,6 +264,13 @@ public final class BlockPointer
 	public BlockPointer unmarshal(byte[] aDocument)
 	{
 		System.arraycopy(aDocument, 0, mBuffer, 0, mBuffer.length);
+		return this;
+	}
+
+
+	public BlockPointer unmarshalBuffer(ByteArrayBuffer aDocument)
+	{
+		aDocument.read(mBuffer);
 		return this;
 	}
 }

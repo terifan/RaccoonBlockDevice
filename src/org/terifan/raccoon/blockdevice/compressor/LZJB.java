@@ -82,7 +82,7 @@ public class LZJB implements Compressor
 
 
 	@Override
-	public void decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength) throws IOException
+	public boolean decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength)
 	{
 		int src = aInputOffset;
 		int dst = aOutputOffset;
@@ -117,6 +117,8 @@ public class LZJB implements Compressor
 				aOutput[dst++] = aInput[src++];
 			}
 		}
+
+		return true;
 	}
 
 

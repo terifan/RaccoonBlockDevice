@@ -1,6 +1,6 @@
 package org.terifan.raccoon.blockdevice.physical;
 
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ public class MemoryBlockDeviceNGTest
 		HashMap<Long,byte[]> blocks = new HashMap<>();
 		ArrayList<Long> offsets = new ArrayList<>();
 
-		MemoryBlockDevice memoryBlockDevice = new MemoryBlockDevice(s);
+		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(s);
 
 		for (int k = 0; k < 5; k++)
 		{

@@ -1,7 +1,6 @@
 package org.terifan.raccoon.blockdevice.compressor;
 
 import java.io.IOException;
-import java.util.Arrays;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 
 
@@ -57,7 +56,7 @@ public class ZLE implements Compressor
 	// decompressing 4096 compressed bytes to 4200 bytes
 
 	@Override
-	public void decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength) throws IOException
+	public boolean decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength)
 	{
 		ByteArrayBuffer input = ByteArrayBuffer.wrap(aInput).position(aInputOffset);
 		ByteArrayBuffer output = ByteArrayBuffer.wrap(aOutput).position(aOutputOffset);
@@ -78,5 +77,7 @@ public class ZLE implements Compressor
 
 			remaining -= len;
 		}
+
+		return true;
 	}
 }

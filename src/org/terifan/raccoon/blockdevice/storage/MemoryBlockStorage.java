@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice.physical;
+package org.terifan.raccoon.blockdevice.storage;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -6,23 +6,23 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.terifan.raccoon.blockdevice.DeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
 
 
-public class MemoryBlockDevice implements PhysicalBlockDevice
+public class MemoryBlockStorage implements BlockStorage
 {
 	private final SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
 	private final int mBlockSize;
 
 
-	public MemoryBlockDevice()
+	public MemoryBlockStorage()
 	{
 		this(4096);
 	}
 
 
-	public MemoryBlockDevice(int aBlockSize)
+	public MemoryBlockStorage(int aBlockSize)
 	{
 		mBlockSize = aBlockSize;
 	}
@@ -65,7 +65,7 @@ public class MemoryBlockDevice implements PhysicalBlockDevice
 			}
 			else
 			{
-				throw new DeviceException("Reading a free block: " + aBlockIndex);
+				throw new RaccoonDeviceException("Reading a free block: " + aBlockIndex);
 			}
 
 			aBlockIndex++;

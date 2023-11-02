@@ -2,14 +2,14 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import java.io.IOException;
 import org.terifan.raccoon.document.Document;
-import org.terifan.raccoon.blockdevice.DeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 
 public class ManagedBlockDevice implements AutoCloseable
 {
-	private PhysicalBlockDevice mPhysBlockDevice;
+	private BlockStorage mBlockStorage;
 	private SuperBlock mSuperBlock;
 	private int mBlockSize;
 	private boolean mModified;
@@ -19,22 +19,24 @@ public class ManagedBlockDevice implements AutoCloseable
 	private int mReservedBlocks;
 
 
-	public ManagedBlockDevice(PhysicalBlockDevice aBlockDevice) throws IOException
+	public ManagedBlockDevice(BlockStorage aBlockStorage) throws IOException
 	{
-		if (aBlockDevice == null)
+		if (aBlockStorage == null)
 		{
-			throw new IllegalArgumentException("aBlockDevice is null");
+			throw new IllegalArgumentException("aBlockStorage is null");
 		}
-		if (aBlockDevice.getBlockSize() < 512 || (aBlockDevice.getBlockSize() & (aBlockDevice.getBlockSize() - 1)) != 0)
+		if (aBlockStorage.getBlockSize() < 512 || (aBlockStorage.getBlockSize() & (aBlockStorage.getBlockSize() - 1)) != 0)
 		{
 			throw new IllegalArgumentException("The block size must be power of 2 and at least 512 bytes in length.");
 		}
 
-		mPhysBlockDevice = aBlockDevice;
-		mBlockSize = aBlockDevice.getBlockSize();
-		mReservedBlocks = 2;
+		mBlockStorage = aBlockStorage;
+
 		mMetadata = new Document();
-		mWasCreated = mPhysBlockDevice.size() < mReservedBlocks;
+		mReservedBlocks = 2;
+
+		mBlockSize = mBlockStorage.getBlockSize();
+		mWasCreated = mBlockStorage.size() < mReservedBlocks;
 
 		init();
 	}
@@ -83,7 +85,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		readSuperBlock();
 
-		mSpaceMap = new SpaceMap(mSuperBlock, this, mPhysBlockDevice);
+		mSpaceMap = new SpaceMap(mSuperBlock, this, mBlockStorage);
 
 		Log.dec();
 	}
@@ -135,7 +137,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public long size()
 	{
-		return mPhysBlockDevice.size() - mReservedBlocks;
+		return mBlockStorage.size() - mReservedBlocks;
 	}
 
 
@@ -147,11 +149,11 @@ public class ManagedBlockDevice implements AutoCloseable
 			rollback();
 		}
 
-		if (mPhysBlockDevice != null)
+		if (mBlockStorage != null)
 		{
-			mPhysBlockDevice.resize(mSpaceMap.getRangeMap().getLastBlockIndex());
-			mPhysBlockDevice.close();
-			mPhysBlockDevice = null;
+			mBlockStorage.resize(mSpaceMap.getRangeMap().getLastBlockIndex());
+			mBlockStorage.close();
+			mBlockStorage = null;
 		}
 	}
 
@@ -171,7 +173,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		if (blockIndex < 0)
 		{
-			throw new DeviceException("Illegal block index allocated.");
+			throw new RaccoonDeviceException("Illegal block index allocated.");
 		}
 
 		return blockIndex;
@@ -195,7 +197,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
+			throw new RaccoonDeviceException("Illegal offset: " + aBlockIndex);
 		}
 
 		freeBlockInternal(mReservedBlocks + aBlockIndex, aBlockCount);
@@ -223,11 +225,11 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
+			throw new RaccoonDeviceException("Illegal offset: " + aBlockIndex);
 		}
 		if ((aBufferLength % mBlockSize) != 0)
 		{
-			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
+			throw new RaccoonDeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
 		writeBlockInternal(mReservedBlocks + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
@@ -246,7 +248,7 @@ public class ManagedBlockDevice implements AutoCloseable
 		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
 		Log.inc();
 
-		mPhysBlockDevice.writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
+		mBlockStorage.writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 
 		Log.dec();
 	}
@@ -256,14 +258,14 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		if (aBlockIndex < 0)
 		{
-			throw new DeviceException("Illegal offset: " + aBlockIndex);
+			throw new RaccoonDeviceException("Illegal offset: " + aBlockIndex);
 		}
 		if ((aBufferLength % mBlockSize) != 0)
 		{
-			throw new DeviceException("Illegal buffer length: " + aBlockIndex);
+			throw new RaccoonDeviceException("Illegal buffer length: " + aBlockIndex);
 		}
 
-		readBlockInternal(aBlockIndex + mReservedBlocks, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
+		readBlockInternal(mReservedBlocks + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 	}
 
 
@@ -277,7 +279,7 @@ public class ManagedBlockDevice implements AutoCloseable
 		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
 		Log.inc();
 
-		mPhysBlockDevice.readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
+		mBlockStorage.readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 
 		Log.dec();
 	}
@@ -295,13 +297,13 @@ public class ManagedBlockDevice implements AutoCloseable
 			Log.i("committing managed block device");
 			Log.inc();
 
-			mSpaceMap.write(mSuperBlock.getSpaceMapPointer(), this, mPhysBlockDevice);
+			mSpaceMap.write(mSuperBlock.getSpaceMapPointer(), this, mBlockStorage);
 
-			mPhysBlockDevice.commit(0, false);
+			mBlockStorage.commit(0, false);
 
 			writeSuperBlock();
 
-			mPhysBlockDevice.commit(1, aMetadata);
+			mBlockStorage.commit(1, aMetadata);
 
 			mSpaceMap.reset();
 			mWasCreated = false;
@@ -351,8 +353,8 @@ public class ManagedBlockDevice implements AutoCloseable
 		SuperBlock superBlockOne = new SuperBlock(-1L);
 		SuperBlock superBlockTwo = new SuperBlock(-1L);
 
-		Document metadataOne = superBlockOne.read(mPhysBlockDevice, 0);
-		Document metadataTwo = superBlockTwo.read(mPhysBlockDevice, 1);
+		Document metadataOne = superBlockOne.read(mBlockStorage, 0);
+		Document metadataTwo = superBlockTwo.read(mBlockStorage, 1);
 
 		if (superBlockOne.getGeneration() == superBlockTwo.getGeneration() + 1)
 		{
@@ -384,7 +386,7 @@ public class ManagedBlockDevice implements AutoCloseable
 		Log.i("write super block %d", index);
 		Log.inc();
 
-		mSuperBlock.write(mPhysBlockDevice, index, mMetadata);
+		mSuperBlock.write(mBlockStorage, index, mMetadata);
 
 		Log.dec();
 	}
@@ -405,7 +407,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public long getAllocatedSpace()
 	{
-		return mPhysBlockDevice.size();
+		return mBlockStorage.size();
 	}
 
 
@@ -414,7 +416,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public long getFreeSpace()
 	{
-		return mPhysBlockDevice.size() - mSpaceMap.getRangeMap().getUsedSpace();
+		return mBlockStorage.size() - mSpaceMap.getRangeMap().getUsedSpace();
 	}
 
 
@@ -434,7 +436,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public void resize(long aNumberOfBlocks)
 	{
-		mPhysBlockDevice.resize(mReservedBlocks + aNumberOfBlocks);
+		mBlockStorage.resize(mReservedBlocks + aNumberOfBlocks);
 	}
 
 
@@ -443,7 +445,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	 */
 	public void clear() throws IOException
 	{
-		mPhysBlockDevice.resize(0);
+		mBlockStorage.resize(0);
 
 		mSpaceMap.reset();
 
@@ -453,7 +455,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 	int roundUp(int aSize)
 	{
-		int s = mPhysBlockDevice.getBlockSize();
+		int s = mBlockStorage.getBlockSize();
 		return aSize + ((s - (aSize % s)) % s);
 	}
 }

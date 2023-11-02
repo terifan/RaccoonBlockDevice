@@ -1,14 +1,14 @@
 package org.terifan.raccoon.blockdevice;
 
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
-import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
 import org.testng.annotations.Test;
 import static org.testng.AssertJUnit.*;
 import org.testng.annotations.DataProvider;
+import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 
 public class BlockAccessorNGTest
@@ -20,11 +20,11 @@ public class BlockAccessorNGTest
 		byte[] in = new byte[100 + length + 100];
 		new Random().nextBytes(in);
 
-		MemoryBlockDevice blockDevice = new MemoryBlockDevice(4096);
+		MemoryBlockStorage blockDevice = new MemoryBlockStorage(4096);
 
 		ManagedBlockDevice managedBlockDevice = new ManagedBlockDevice(blockDevice);
 		BlockAccessor blockAccessor = new BlockAccessor(managedBlockDevice, true);
-		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, BlockType.BTREE_NODE, 0, CompressorLevel.ZLE);
+		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, BlockType.BTREE_NODE, 0, CompressorAlgorithm.ZLE);
 		managedBlockDevice.commit();
 
 		assertEquals(2 + 1 + 3, managedBlockDevice.getAllocatedSpace()); // 2 superblock + 1 spacemap + 3 data

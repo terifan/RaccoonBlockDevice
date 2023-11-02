@@ -1,12 +1,12 @@
 package org.terifan.raccoon.blockdevice.secure;
 
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
-import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
+import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 
 public class SecureBlockDeviceNGTest
@@ -14,7 +14,7 @@ public class SecureBlockDeviceNGTest
 	@Test
 	public void test1() throws IOException
 	{
-		MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
+		MemoryBlockStorage blockDevice = new MemoryBlockStorage(512);
 		AccessCredentials accessCredentials = new AccessCredentials("password");
 
 		byte[] out = new byte[512];
@@ -56,7 +56,7 @@ public class SecureBlockDeviceNGTest
 					int numUnits = 32;
 					int blocksPerUnit = 4;
 
-					MemoryBlockDevice blockDevice = new MemoryBlockDevice(unitSize);
+					MemoryBlockStorage blockDevice = new MemoryBlockStorage(unitSize);
 
 					int[][] blockKeys = new int[numUnits][4];
 					for (int i = 0; i < numUnits; i++)

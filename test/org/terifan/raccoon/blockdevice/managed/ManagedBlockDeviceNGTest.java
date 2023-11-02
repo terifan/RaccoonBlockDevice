@@ -1,7 +1,7 @@
 package org.terifan.raccoon.blockdevice.managed;
 
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import java.io.IOException;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
@@ -16,7 +16,7 @@ public class ManagedBlockDeviceNGTest
 	{
 		int s = 512;
 
-		try (ManagedBlockDevice dev = new ManagedBlockDevice(new MemoryBlockDevice(s)))
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(new MemoryBlockStorage(s)))
 		{
 			long pos1 = dev.allocBlock(1);
 			long pos2 = dev.allocBlock(1);
@@ -38,7 +38,7 @@ public class ManagedBlockDeviceNGTest
 	{
 		int s = 512;
 
-		try (ManagedBlockDevice dev = new ManagedBlockDevice(new MemoryBlockDevice(s)))
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(new MemoryBlockStorage(s)))
 		{
 			long pos1 = dev.allocBlock(1); // alloc 0
 			long pos2 = dev.allocBlock(1); // alloc 1
@@ -72,7 +72,7 @@ public class ManagedBlockDeviceNGTest
 		int rows = 250;
 		long[] positions = new long[10 * rows];
 
-		MemoryBlockDevice memoryBlockDevice = new MemoryBlockDevice(s);
+		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(s);
 
 		for (int test = 0; test < 10; test++)
 		{

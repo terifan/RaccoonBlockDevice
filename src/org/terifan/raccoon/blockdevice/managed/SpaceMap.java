@@ -1,15 +1,17 @@
 package org.terifan.raccoon.blockdevice.managed;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import org.terifan.raccoon.blockdevice.BlockType;
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
-import org.terifan.raccoon.blockdevice.DeviceException;
-import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
-import org.terifan.raccoon.blockdevice.compressor.CompressorLevel;
+import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
+import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
+import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
-import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
+import org.terifan.raccoon.security.messagedigest.SHA3;
 import org.terifan.raccoon.security.random.SecureRandom;
+import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 
 class SpaceMap
@@ -30,7 +32,7 @@ class SpaceMap
 	}
 
 
-	public SpaceMap(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
+	public SpaceMap(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, BlockStorage aBlockDeviceDirect)
 	{
 		mUncommittedAllocations = new HashSet<>();
 
@@ -70,11 +72,6 @@ class SpaceMap
 
 	public void free(long aBlockIndex, long aBlockCount)
 	{
-		if (aBlockIndex < 0 || aBlockIndex + aBlockCount > Integer.MAX_VALUE)
-		{
-			throw new IllegalArgumentException();
-		}
-
 		long blockIndex = aBlockIndex;
 
 		for (int i = 0; i < aBlockCount; i++)
@@ -93,7 +90,7 @@ class SpaceMap
 	{
 		if (!mRangeMap.isFree((int)aBlockIndex, aBlockCount))
 		{
-			throw new DeviceException("Range not allocated: " + aBlockIndex + " +" + aBlockCount);
+			throw new RaccoonDeviceException("Range not allocated: " + aBlockIndex + " +" + aBlockCount);
 		}
 	}
 
@@ -110,7 +107,7 @@ class SpaceMap
 	}
 
 
-	public void write(BlockPointer aSpaceMapBlockPointer, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
+	public void write(BlockPointer aSpaceMapBlockPointer, ManagedBlockDevice aBlockDevice, BlockStorage aBlockDeviceDirect)
 	{
 		Log.d("write space map");
 		Log.inc();
@@ -131,14 +128,14 @@ class SpaceMap
 		long blockIndex = aBlockDevice.allocBlockInternal(allocSize / blockSize);
 		int[] blockKey = PRNG.ints(4).toArray();
 
-		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorLevel.NONE.ordinal());
+		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorAlgorithm.NONE);
 		aSpaceMapBlockPointer.setBlockType(BlockType.SPACEMAP);
 		aSpaceMapBlockPointer.setAllocatedSize(allocSize);
 		aSpaceMapBlockPointer.setBlockIndex0(blockIndex);
 		aSpaceMapBlockPointer.setLogicalSize(buffer.position());
 		aSpaceMapBlockPointer.setPhysicalSize(buffer.position());
 		aSpaceMapBlockPointer.setChecksumAlgorithm((byte)0); // not used
-		aSpaceMapBlockPointer.setChecksum(MurmurHash3.hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration()));
+		aSpaceMapBlockPointer.setChecksum(new SHA3().hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration()));
 		aSpaceMapBlockPointer.setBlockKey(blockKey);
 
 		// Pad buffer to block size
@@ -152,7 +149,7 @@ class SpaceMap
 	}
 
 
-	private RangeMap read(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, PhysicalBlockDevice aBlockDeviceDirect)
+	private RangeMap read(SuperBlock aSuperBlock, ManagedBlockDevice aBlockDevice, BlockStorage aBlockDeviceDirect)
 	{
 		BlockPointer blockPointer = aSuperBlock.getSpaceMapPointer();
 
@@ -164,13 +161,13 @@ class SpaceMap
 		if (blockPointer.getAllocatedSize() == 0)
 		{
 			// all blocks are free in this device
-			rangeMap.add(0, Integer.MAX_VALUE);
+			rangeMap.add(0, Long.MAX_VALUE);
 		}
 		else
 		{
 			if (blockPointer.getBlockIndex0() < 0)
 			{
-				throw new DeviceException("Block at illegal offset: " + blockPointer.getBlockIndex0());
+				throw new RaccoonDeviceException("Block at illegal offset: " + blockPointer.getBlockIndex0());
 			}
 
 			int blockSize = aBlockDevice.getBlockSize();
@@ -179,11 +176,11 @@ class SpaceMap
 
 			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey());
 
-			int[] hash = MurmurHash3.hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration());
+			int[] checksum = new SHA3().hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration());
 
-			if (!blockPointer.verifyChecksum(hash))
+			if (!Arrays.equals(blockPointer.getChecksum(), checksum))
 			{
-				throw new DeviceException("Checksum error at block index ");
+				throw new RaccoonDeviceException("Checksum error at block index ");
 			}
 
 			buffer.limit(blockPointer.getLogicalSize());

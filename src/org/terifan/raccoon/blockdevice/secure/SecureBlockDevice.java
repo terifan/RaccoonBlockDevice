@@ -9,9 +9,9 @@ import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
-import org.terifan.raccoon.blockdevice.physical.PhysicalBlockDevice;
 import org.terifan.raccoon.security.random.ISAAC.PRNG;
 import org.terifan.raccoon.security.random.SecureRandom;
+import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 
 /**
@@ -20,7 +20,7 @@ import org.terifan.raccoon.security.random.SecureRandom;
  * [boot block][super block 0][super block 1][other blocks]
  *
  */
-public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseable
+public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 {
 	private final static int SALT_SIZE = 256;
 	private final static int PAYLOAD_SIZE = 256;
@@ -31,11 +31,11 @@ public final class SecureBlockDevice implements PhysicalBlockDevice, AutoCloseab
 	private final static int CHECKSUM_SEED = 0xfedcba98;
 
 	private transient int mBootBlockCount;
-	private transient PhysicalBlockDevice mBlockDevice;
+	private transient BlockStorage mBlockDevice;
 	private transient CipherImplementation mCipherImplementation;
 
 
-	public SecureBlockDevice(AccessCredentials aAccessCredentials, PhysicalBlockDevice aBlockDevice) throws InvalidPasswordException
+	public SecureBlockDevice(AccessCredentials aAccessCredentials, BlockStorage aBlockDevice) throws InvalidPasswordException
 	{
 		if (aBlockDevice == null)
 		{

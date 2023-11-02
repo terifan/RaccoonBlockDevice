@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.util.LogLevel;
 import org.terifan.raccoon.document.Document;
@@ -19,7 +19,7 @@ public class LobByteChannelNGTest
 	{
 		Log.setLevel(LogLevel.DEBUG);
 
-		MemoryBlockDevice memoryBlockDevice = new MemoryBlockDevice(512);
+		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(512);
 
 		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
 		{
@@ -72,7 +72,7 @@ public class LobByteChannelNGTest
 		new Random(1).nextBytes(chunk1);
 		new Random(2).nextBytes(chunk3);
 
-		MemoryBlockDevice memoryBlockDevice = new MemoryBlockDevice(512);
+		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(512);
 
 //		Files.deleteIfExists(Paths.get("d:\\test.dev"));
 

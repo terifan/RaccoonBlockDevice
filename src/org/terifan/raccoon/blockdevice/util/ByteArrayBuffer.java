@@ -80,6 +80,16 @@ public final class ByteArrayBuffer
 	}
 
 
+	public ByteArrayBuffer ensureCapacity(int aNewCapacity)
+	{
+		if (capacity() < aNewCapacity)
+		{
+			return capacity(aNewCapacity);
+		}
+		return this;
+	}
+
+
 	public ByteArrayBuffer limit(int aLimit)
 	{
 		mLimit = aLimit;
@@ -127,7 +137,7 @@ public final class ByteArrayBuffer
 	}
 
 
-	private ByteArrayBuffer ensureCapacity(int aIncrement)
+	private ByteArrayBuffer ensureNext(int aIncrement)
 	{
 		if (mBuffer.length < mOffset + aIncrement) // important: increase the size before it's full, ie remaining() should not return zero when buffer can grow
 		{
@@ -188,11 +198,22 @@ public final class ByteArrayBuffer
 	{
 		if (mOffset >= mBuffer.length)
 		{
-			ensureCapacity(1);
+			ensureNext(1);
 		}
 
 		mBuffer[mOffset++] = (byte)aByte;
 		return this;
+	}
+
+
+	public int peekInt8()
+	{
+		if (mOffset >= mBuffer.length || mOffset >= mLimit)
+		{
+			return -1;
+		}
+
+		return 0xff & mBuffer[mOffset];
 	}
 
 
@@ -410,7 +431,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer write(byte[] aBuffer, int aOffset, int aLength)
 	{
-		ensureCapacity(aLength);
+		ensureNext(aLength);
 
 		System.arraycopy(aBuffer, aOffset, mBuffer, mOffset, aLength);
 		mOffset += aLength;
@@ -420,7 +441,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer transfer(ByteArrayBuffer aDestination, int aLength)
 	{
-		aDestination.ensureCapacity(aLength);
+		aDestination.ensureNext(aLength);
 
 		System.arraycopy(mBuffer, mOffset, aDestination.mBuffer, aDestination.mOffset, aLength);
 
@@ -441,7 +462,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeInt16(int aValue)
 	{
-		ensureCapacity(2);
+		ensureNext(2);
 		mBuffer[mOffset++] = (byte)(aValue >> 8);
 		mBuffer[mOffset++] = (byte)(aValue);
 		return this;
@@ -459,7 +480,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeInt24(int aValue)
 	{
-		ensureCapacity(3);
+		ensureNext(3);
 		mBuffer[mOffset++] = (byte)(aValue >> 16);
 		mBuffer[mOffset++] = (byte)(aValue >> 8);
 		mBuffer[mOffset++] = (byte)(aValue);
@@ -479,7 +500,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeInt32(int aValue)
 	{
-		ensureCapacity(4);
+		ensureNext(4);
 		mBuffer[mOffset++] = (byte)(aValue >>> 24);
 		mBuffer[mOffset++] = (byte)(aValue >> 16);
 		mBuffer[mOffset++] = (byte)(aValue >> 8);
@@ -501,7 +522,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeInt40(long aValue)
 	{
-		ensureCapacity(8);
+		ensureNext(8);
 		mBuffer[mOffset++] = (byte)(aValue >> 32);
 		mBuffer[mOffset++] = (byte)(aValue >> 24);
 		mBuffer[mOffset++] = (byte)(aValue >> 16);
@@ -527,7 +548,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeInt64(long aValue)
 	{
-		ensureCapacity(8);
+		ensureNext(8);
 		mBuffer[mOffset++] = (byte)(aValue >>> 56);
 		mBuffer[mOffset++] = (byte)(aValue >> 48);
 		mBuffer[mOffset++] = (byte)(aValue >> 40);
@@ -596,7 +617,7 @@ public final class ByteArrayBuffer
 
 	public ByteArrayBuffer writeString(String aInput)
 	{
-		ensureCapacity(aInput.length());
+		ensureNext(aInput.length());
 
 		for (int i = 0; i < aInput.length(); i++)
 		{

@@ -8,15 +8,17 @@ import org.terifan.raccoon.blockdevice.BlockAccessor;
 import org.terifan.raccoon.blockdevice.LobByteChannel;
 import org.terifan.raccoon.blockdevice.LobOpenOption;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.FileBlockDevice;
-import org.terifan.raccoon.blockdevice.physical.MemoryBlockDevice;
+import org.terifan.raccoon.blockdevice.storage.FileBlockStorage;
+import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import org.terifan.raccoon.blockdevice.secure.AccessCredentials;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
+import org.terifan.raccoon.blockdevice.util.Console;
 import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.util.LogLevel;
 import org.terifan.raccoon.document.Array;
+import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 
 public class Test
@@ -25,32 +27,46 @@ public class Test
 	{
 		try
 		{
-//			Log.setLevel(LogLevel.DEBUG);
+			Console.setPrettyColorsEnabled(true);
 			Random rnd = new Random(1);
-			byte[] output = new byte[10000];
-			rnd.nextBytes(output);
+			byte[] output = new byte[90_000];
+			nextBytes(rnd, output, 5000, 2500);
+			nextBytes(rnd, output, 15000, 22500);
+			nextBytes(rnd, output, 55000, 30000);
 
-			MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
+			MemoryBlockStorage blockStorage = new MemoryBlockStorage(512);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+//			Log.setLevel(LogLevel.DEBUG);
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, 1, false, 16384))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, true, 2048, CompressorAlgorithm.DEFLATE_BEST))
 				{
+					lob.position(4100);
 					lob.writeAllBytes(output);
 				}
 				dev.getMetadata().put("lob", header);
 				dev.commit();
 			}
+			Log.setLevel(LogLevel.FATAL);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+			System.out.println("-".repeat(100));
+
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().get("lob");
 
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
 				{
+					System.out.println(lob.getMetadata().toByteArray().length);
+					System.out.println(lob.getMetadata());
+					System.out.println(lob);
+					lob.position(4100);
 					byte[] input = lob.readAllBytes();
-					System.out.println(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
+					if (!Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)))
+					{
+						Log.diffDump(output, 32, input);
+					}
 				}
 			}
 		}
@@ -79,12 +95,12 @@ public class Test
 			byte[] output = new byte[10000];
 			int bufferLength = 0;
 
-			MemoryBlockDevice blockDevice = new MemoryBlockDevice(512);
+			MemoryBlockStorage blockDevice = new MemoryBlockStorage(512);
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, 1, false, 512))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, false, 512, CompressorAlgorithm.LZJB))
 				{
 					for (int i = 0; i < 1; i++)
 					{
@@ -96,7 +112,7 @@ public class Test
 							rnd.nextBytes(data);
 						}
 						lob.position(rnd.nextInt(output.length - data.length));
-//						System.out.println("WRITE " + lob.position() + " +" + data.length + " " + (text?"text":"zero"));
+//						Console.printf("WRITE " + lob.position() + " +" + data.length + " " + (text?"text":"zero"));
 						System.arraycopy(data, 0, output, (int)lob.position(), data.length);
 						lob.writeAllBytes(data);
 						bufferLength = Math.max(bufferLength, (int)lob.position());
@@ -116,7 +132,25 @@ public class Test
 //				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
 //				{
 //					byte[] input = lob.readAllBytes();
-//					System.out.println(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
+//					Console.printf(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
+//					Log.diffDump(input, 32, Arrays.copyOfRange(output, 0, input.length));
+//				}
+//			}
+
+//			System.out.println();
+//			blockDevice.dump(64);
+
+//			System.out.println(blockDevice);
+//			Log.setLevel(LogLevel.DEBUG);
+
+//			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
+//			{
+//				Document header = dev.getMetadata().get("lob");
+//
+//				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+//				{
+//					byte[] input = lob.readAllBytes();
+//					Console.printf(Arrays.equals(input, Arrays.copyOfRange(output, 0, input.length)) ? "data identical" : "data missmatch");
 //					Log.diffDump(input, 32, Arrays.copyOfRange(output, 0, input.length));
 //				}
 //			}
@@ -147,7 +181,7 @@ public class Test
 			rnd.nextBytes(lobData);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512, false))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -169,7 +203,7 @@ public class Test
 
 //			Log.setLevel(LogLevel.DEBUG);
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512, false))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());
@@ -203,6 +237,15 @@ public class Test
 		catch (Throwable e)
 		{
 			e.printStackTrace(System.out);
+		}
+	}
+
+
+	private static void nextBytes(Random aRnd, byte[] aOutput, int aOffset, int aLength)
+	{
+		for (int i = 0; i < aLength; i++)
+		{
+			aOutput[aOffset++] = (byte)('a' + aRnd.nextInt(10));
 		}
 	}
 }

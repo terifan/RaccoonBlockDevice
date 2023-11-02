@@ -21,13 +21,9 @@ class DeflateCompressor implements Compressor
 	@Override
 	public boolean compress(byte[] aInput, int aInputOffset, int aInputLength, ByteBlockOutputStream aOutputStream)
 	{
-		try
+		try (DeflaterOutputStream dis = new DeflaterOutputStream(aOutputStream, new Deflater(mLevel)))
 		{
-			try (DeflaterOutputStream dis = new DeflaterOutputStream(aOutputStream, new Deflater(mLevel)))
-			{
-				dis.write(aInput, aInputOffset, aInputLength);
-			}
-
+			dis.write(aInput, aInputOffset, aInputLength);
 			return aOutputStream.size() < aInputLength;
 		}
 		catch (IOException e)
@@ -39,21 +35,27 @@ class DeflateCompressor implements Compressor
 
 
 	@Override
-	public void decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength) throws IOException
+	public boolean decompress(byte[] aInput, int aInputOffset, int aInputLength, byte[] aOutput, int aOutputOffset, int aOutputLength)
 	{
 		try (InflaterInputStream iis = new InflaterInputStream(new ByteArrayInputStream(aInput, aInputOffset, aInputLength)))
 		{
-			for (int position = aOutputOffset;;)
+			for (int position = aOutputOffset, remaining = aOutputLength;;)
 			{
-				int len = iis.read(aOutput, position, aOutputLength - position);
+				int len = iis.read(aOutput, position, remaining);
 
 				if (len <= 0)
 				{
-					break;
+					return remaining == 0;
 				}
 
 				position += len;
+				remaining -= len;
 			}
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace(System.out);
+			return false;
 		}
 	}
 }
