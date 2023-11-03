@@ -16,6 +16,13 @@ import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
+//
+
+//      __
+//     /  \
+//    /\  /\
+//   /\/\/\/\
+
 //                       __________node____________
 //                      /                          \
 //         ___________node________                hole
@@ -25,7 +32,7 @@ import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 //         leaf hole leaf    leaf leaf leaf
 
 //
-// lob pointer		version, logical size, block size, compression, [ptr]
+// lob pointer		version, length, leaf size, node size, compression, [ptr], metadata
 // lob directory	[ptr][ptr][ptr][...][...][...][...][...][ptr][ptr][...][...][...][ptr][...][ptr]
 // lob blocks		##### ##### ##### ##### ##### ##### #####
 //
@@ -33,17 +40,19 @@ import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 //
 public class LobByteChannel implements SeekableByteChannel
 {
-	private final static boolean LOG = !false;
+	private final static boolean LOG = false;
 
+	public final static int DEFAULT_NODE_SIZE = 1024;
 	public final static int DEFAULT_LEAF_SIZE = 128 * 1024;
 	public final static int DEFAULT_COMPRESSOR = CompressorAlgorithm.NONE;
 
 	private final static String IX_VERSION = "0";
-	private final static String IX_LOGICAL_SIZE = "1";
-	private final static String IX_BLOCK_SIZE = "2";
-	private final static String IX_COMPRESSION = "3";
-	private final static String IX_POINTER = "4";
-	private final static String IX_METADATA = "5";
+	private final static String IX_LENGTH = "1";
+	private final static String IX_NODE_SIZE = "2";
+	private final static String IX_LEAF_SIZE = "3";
+	private final static String IX_COMPRESSION = "4";
+	private final static String IX_POINTER = "5";
+	private final static String IX_METADATA = "6";
 
 	public final static String METADATA_MODIFIED = "$modified";
 	public final static String METADATA_CREATED = "$created";
@@ -53,28 +62,45 @@ public class LobByteChannel implements SeekableByteChannel
 
 	private Document mHeader;
 	private BlockAccessor mBlockAccessor;
-	private ByteArrayBuffer mIndirectBlock;
-	private boolean mClosed;
-	private long mLength;
-	private long mPosition;
-	private boolean mModified;
-	private byte[] mChunk;
-	private int mChunkIndex;
-	private boolean mChunkModified;
-	private int mLeafBlockSize;
-	private int mCompressor;
-	private BlockPointer mIndirectBlockPointer;
 	private Consumer<LobByteChannel> mCloseAction;
+
+	private ByteArrayBuffer mIndirectBlock;
+	private BlockPointer mIndirectBlockPointer;
+	private boolean mClosed;
+//	private boolean mModified;
 	private boolean mWriteMetadata;
+
+	private long mLength;
+	private int mNodeSize;
+	private int mLeafSize;
+	private int mCompressor;
+
+	private Page mRoot;
+	private long mPosition;
+
+	static class Page
+	{
+		byte[] mBuffer;
+		PageState mState;
+		Page[] mChildren;
+		BlockPointer mBlockPointer;
+	}
+
+	static enum PageState
+	{
+		HOLE,
+		DIRTY,
+		CLEAN
+	}
 
 
 	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption) throws IOException
 	{
-		this(aBlockAccessor, aHeader, aOpenOption, true, DEFAULT_LEAF_SIZE, DEFAULT_COMPRESSOR);
+		this(aBlockAccessor, aHeader, aOpenOption, true, DEFAULT_NODE_SIZE, DEFAULT_LEAF_SIZE, DEFAULT_COMPRESSOR);
 	}
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, boolean aWriteMetadata, int aLeafBlockSize, int aCompressorLevel) throws IOException
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, boolean aWriteMetadata, int aNodeSize, int aLeafSize, int aCompressorLevel) throws IOException
 	{
 		if (aHeader == null)
 		{
@@ -85,8 +111,6 @@ public class LobByteChannel implements SeekableByteChannel
 		mBlockAccessor = aBlockAccessor;
 		mWriteMetadata = aWriteMetadata;
 
-		mCompressor = mHeader.get(IX_COMPRESSION, aCompressorLevel);
-
 		if (aOpenOption == LobOpenOption.REPLACE)
 		{
 			delete();
@@ -94,48 +118,48 @@ public class LobByteChannel implements SeekableByteChannel
 
 		int blockSize = mBlockAccessor.getBlockDevice().getBlockSize();
 
-		mLeafBlockSize = mHeader.get(IX_BLOCK_SIZE, () -> (aLeafBlockSize + blockSize - 1) / blockSize * blockSize);
-		mChunk = new byte[mLeafBlockSize];
-		mLength = mHeader.get(IX_LOGICAL_SIZE, 0L);
+		mLeafSize = mHeader.get(IX_LEAF_SIZE, () -> DEFAULT_LEAF_SIZE);
+		mLength = mHeader.get(IX_LENGTH, 0L);
+		mCompressor = mHeader.get(IX_COMPRESSION, aCompressorLevel);
 
-		byte[] pointer = mHeader.getBinary(IX_POINTER);
-		if (pointer != null)
-		{
-			BlockPointer tmp = new BlockPointer().unmarshal(pointer);
-
-			if (tmp.getBlockType() == BlockType.LOB_NODE)
-			{
-				Console.println(tmp + " - HAS INDIRECT BLOCK");
-
-				mIndirectBlockPointer = tmp;
-				mIndirectBlock = ByteArrayBuffer.wrap(mBlockAccessor.readBlock(mIndirectBlockPointer));
-			}
-			else
-			{
-				Console.println(tmp + " - SINGLE POINTER");
-
-				mIndirectBlock = ByteArrayBuffer.wrap(pointer).capacity(blockSize);
-			}
-
-			mIndirectBlock.position(0);
-			for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
-			{
-				Console.println("     +-- " + new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE])));
-			}
-		}
-		else
-		{
-			mIndirectBlock = ByteArrayBuffer.alloc(blockSize);
-		}
+//		byte[] pointer = mHeader.getBinary(IX_POINTER);
+//		if (pointer != null)
+//		{
+//			BlockPointer tmp = new BlockPointer().unmarshal(pointer);
+//
+//			if (tmp.getBlockType() == BlockType.LOB_NODE)
+//			{
+//				if (LOG) Console.println(tmp + " - HAS INDIRECT BLOCK");
+//
+//				mIndirectBlockPointer = tmp;
+//				mIndirectBlock = ByteArrayBuffer.wrap(mBlockAccessor.readBlock(mIndirectBlockPointer));
+//			}
+//			else
+//			{
+//				if (LOG) Console.println(tmp + " - SINGLE POINTER");
+//
+//				mIndirectBlock = ByteArrayBuffer.wrap(pointer).capacity(blockSize);
+//			}
+//
+//			mIndirectBlock.position(0);
+//			for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
+//			{
+//				if (LOG) Console.println("     +-- " + new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE])));
+//			}
+//		}
+//		else
+//		{
+//			mIndirectBlock = ByteArrayBuffer.alloc(blockSize);
+//		}
 
 		if (aOpenOption == LobOpenOption.APPEND)
 		{
 			mPosition = mLength;
 		}
-		if (aOpenOption == LobOpenOption.APPEND || aOpenOption == LobOpenOption.WRITE)
-		{
-			mChunkIndex = -1; // force sync to load the block at mPosition
-		}
+//		if (aOpenOption == LobOpenOption.APPEND || aOpenOption == LobOpenOption.WRITE)
+//		{
+//			mChunkIndex = -1; // force sync to load the block at mPosition
+//		}
 
 		if (mWriteMetadata)
 		{
@@ -164,7 +188,6 @@ public class LobByteChannel implements SeekableByteChannel
 		}
 
 		int limit = aDst.limit() - aDst.position();
-
 		int total = (int)Math.min(limit, mLength - mPosition);
 
 		if (total == 0)
@@ -172,30 +195,20 @@ public class LobByteChannel implements SeekableByteChannel
 			return -1;
 		}
 
-		if (LOG)
-		{
-			Console.println("READ  %d +%d", mPosition, total);
-		}
-
-		int posInChunk = posInChunk();
-
-		for (int remaining = total; remaining > 0;)
-		{
-			sync(false);
-
-			int length = Math.min(remaining, mLeafBlockSize - posInChunk);
-
-			if (LOG)
-			{
-//				Console.println("\tAppend %d +%d", posInChunk, length);
-			}
-
-			aDst.put(mChunk, posInChunk, length);
-			mPosition += length;
-			remaining -= length;
-
-			posInChunk = 0;
-		}
+//		int posInChunk = posInChunk();
+//
+//		for (int remaining = total; remaining > 0;)
+//		{
+//			sync(false);
+//
+//			int length = Math.min(remaining, mLeafSize - posInChunk);
+//
+//			aDst.put(mChunk, posInChunk, length);
+//			mPosition += length;
+//			remaining -= length;
+//
+//			posInChunk = 0;
+//		}
 
 		return total;
 	}
@@ -211,34 +224,24 @@ public class LobByteChannel implements SeekableByteChannel
 
 		int total = aSrc.limit() - aSrc.position();
 
-		if (LOG)
-		{
-			Console.println("WRITE %d +%d", mPosition, total);
-		}
-
-		int posInChunk = posInChunk();
-
-		for (int remaining = total; remaining > 0;)
-		{
-			sync(false);
-
-			int length = Math.min(remaining, mLeafBlockSize - posInChunk);
-
-			if (LOG)
-			{
-//				Console.println("\tAppend %d +%d", posInChunk, length);
-			}
-
-			aSrc.get(mChunk, posInChunk, length);
-			mPosition += length;
-			remaining -= length;
-
-			mLength = Math.max(mLength, mPosition);
-			mChunkModified = true;
-			posInChunk = 0;
-		}
-
-		mModified = true;
+//		int posInChunk = posInChunk();
+//
+//		for (int remaining = total; remaining > 0;)
+//		{
+//			sync(false);
+//
+//			int length = Math.min(remaining, mLeafSize - posInChunk);
+//
+//			aSrc.get(mChunk, posInChunk, length);
+//			mPosition += length;
+//			remaining -= length;
+//
+//			mLength = Math.max(mLength, mPosition);
+//			mChunkModified = true;
+//			posInChunk = 0;
+//		}
+//
+//		mModified = true;
 
 		return total;
 	}
@@ -258,8 +261,6 @@ public class LobByteChannel implements SeekableByteChannel
 		{
 			throw new ClosedChannelException();
 		}
-
-		sync(false);
 
 		mPosition = aNewPosition;
 		return this;
@@ -295,167 +296,160 @@ public class LobByteChannel implements SeekableByteChannel
 	@Override
 	public void close() throws IOException
 	{
-		if (mClosed || !mModified)
+		if (mClosed)
 		{
 			return;
 		}
 
-		sync(true);
+//		sync(true);
 
 		Log.d("closing lob");
 		Log.inc();
 
-		if (LOG)
-		{
-			Console.println("CLOSE +%d", mLength);
-		}
-
-		if (mIndirectBlockPointer != null)
-		{
-			Console.println(mIndirectBlockPointer + " - FREE");
-
-			Log.d("free indirect block");
-			Log.inc();
-			mBlockAccessor.freeBlock(mIndirectBlockPointer);
-			mIndirectBlockPointer = null;
-			Log.dec();
-		}
-
-		if (mLength > mLeafBlockSize)
-		{
-			mIndirectBlockPointer = mBlockAccessor.writeBlock(mIndirectBlock.array(), 0, mIndirectBlock.capacity(), BlockType.LOB_NODE, 1, CompressorAlgorithm.ZLE);
-			mHeader.put(IX_POINTER, mIndirectBlockPointer.marshal());
-
-			Console.println(mIndirectBlockPointer + " - WRITE");
-		}
-		else
-		{
-			mHeader.put(IX_POINTER, mIndirectBlock.position(0).read(new byte[SIZE]));
-		}
-
-		long physLength = 0;
-		long allocLength = 0;
-		mIndirectBlock.position(0);
-		for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
-		{
-			BlockPointer bp = new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE]));
-			physLength += bp.getPhysicalSize();
-			allocLength += bp.getAllocatedSize();
-		}
-
-		mHeader.put(IX_VERSION, 0).put(IX_LOGICAL_SIZE, mLength).put(IX_BLOCK_SIZE, mLeafBlockSize).put(IX_COMPRESSION, mCompressor);
-
-		if (mWriteMetadata)
-		{
-			getMetadata()
-				.putIfAbsent(METADATA_CREATED, LocalDateTime::now)
-				.put(METADATA_MODIFIED, LocalDateTime.now())
-				.put(METADATA_LOGICAL_SIZE, mLength)
-				.put(METADATA_PHYSICAL_SIZE, physLength)
-				.put(METADATA_ALLOCATED_SIZE, allocLength);
-		}
-
-		mClosed = true;
-		mBlockAccessor = null;
-		mIndirectBlock = null;
-		mChunk = null;
-		mHeader = null;
-		mIndirectBlockPointer = null;
-
-		if (mCloseAction != null)
-		{
-			mCloseAction.accept(this);
-			mCloseAction = null;
-		}
+//		if (mIndirectBlockPointer != null)
+//		{
+//			if (LOG) Console.println(mIndirectBlockPointer + " - FREE");
+//
+//			Log.d("free indirect block");
+//			Log.inc();
+//			mBlockAccessor.freeBlock(mIndirectBlockPointer);
+//			mIndirectBlockPointer = null;
+//			Log.dec();
+//		}
+//
+//		if (mLength > mLeafSize)
+//		{
+//			mIndirectBlockPointer = mBlockAccessor.writeBlock(mIndirectBlock.array(), 0, mIndirectBlock.capacity(), BlockType.LOB_NODE, 1, CompressorAlgorithm.ZLE);
+//			mHeader.put(IX_POINTER, mIndirectBlockPointer.marshal());
+//
+//			if (LOG) Console.println(mIndirectBlockPointer + " - WRITE");
+//		}
+//		else
+//		{
+//			mHeader.put(IX_POINTER, mIndirectBlock.position(0).read(new byte[SIZE]));
+//		}
+//
+//		long physLength = 0;
+//		long allocLength = 0;
+//		mIndirectBlock.position(0);
+//		for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
+//		{
+//			BlockPointer bp = new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE]));
+//			physLength += bp.getPhysicalSize();
+//			allocLength += bp.getAllocatedSize();
+//		}
+//
+//		mHeader.put(IX_VERSION, 0).put(IX_LENGTH, mLength).put(IX_LEAF_SIZE, mLeafSize).put(IX_COMPRESSION, mCompressor);
+//
+//		if (mWriteMetadata)
+//		{
+//			getMetadata()
+//				.putIfAbsent(METADATA_CREATED, LocalDateTime::now)
+//				.put(METADATA_MODIFIED, LocalDateTime.now())
+//				.put(METADATA_LOGICAL_SIZE, mLength)
+//				.put(METADATA_PHYSICAL_SIZE, physLength)
+//				.put(METADATA_ALLOCATED_SIZE, allocLength);
+//		}
+//
+//		mClosed = true;
+//		mBlockAccessor = null;
+//		mIndirectBlock = null;
+//		mChunk = null;
+//		mHeader = null;
+//		mIndirectBlockPointer = null;
+//
+//		if (mCloseAction != null)
+//		{
+//			mCloseAction.accept(this);
+//			mCloseAction = null;
+//		}
 
 		Log.dec();
 	}
 
 
-	private void sync(boolean aFinal) throws IOException
-	{
-		if (LOG)
-		{
-//			Console.println("\tSync pos: %d, size: %d, final: %d, posChunk: %d, indexChunk: %d, mod: %d", mPosition, mLength, aFinal, posInChunk(), mPosition / mLeafBlockSize, mChunkModified);
-		}
-
-		if (posInChunk() == 0 || mChunkIndex != mPosition / mLeafBlockSize || aFinal)
-		{
-			if (mChunkModified)
-			{
-				int len = (int)Math.min(mLeafBlockSize, mLength - mLeafBlockSize * mChunkIndex);
-
-				if (LOG)
-				{
-//					Console.println("\tWrite chunk %d, %d bytes", mChunkIndex, len);
-				}
-
-				if (mChunkIndex * SIZE < mIndirectBlock.capacity() && mIndirectBlock.position(mChunkIndex * SIZE).peekInt8() != BlockType.LOB_HOLE && mIndirectBlock.position(mChunkIndex * SIZE).peekInt8() != BlockType.HOLE)
-				{
-					BlockPointer bp = new BlockPointer().unmarshalBuffer(mIndirectBlock);
-					mBlockAccessor.freeBlock(bp);
-					Console.println(bp + " - FREE");
-				}
-
-				BlockPointer bp = mBlockAccessor.writeBlock(mChunk, 0, len, BlockType.LOB_LEAF, 0, mCompressor);
-				if (bp.getPhysicalSize() == 0)
-				{
-					bp.setBlockType(BlockType.LOB_HOLE);
-				}
-
-				Console.println(bp + " - WRITE");
-
-				mIndirectBlock.ensureCapacity(((mChunkIndex + 1) * SIZE + mLeafBlockSize - 1) / mLeafBlockSize * mLeafBlockSize);
-				mIndirectBlock.position(mChunkIndex * SIZE).write(bp.marshal());
-			}
-
-			if (!aFinal)
-			{
-				Arrays.fill(mChunk, (byte)0);
-
-				mChunkIndex = (int)(mPosition / mLeafBlockSize);
-				mChunkModified = false;
-
-				BlockPointer bp = mChunkIndex * SIZE >= mIndirectBlock.capacity() ? null : new BlockPointer().unmarshalBuffer(mIndirectBlock.position(mChunkIndex * SIZE));
-
-				if (bp != null && bp.getPhysicalSize() > 0)
-				{
-					if (LOG)
-					{
-//						Console.println("\tRead chunk %d", mChunkIndex);
-					}
-
-					mBlockAccessor.readBlock(bp, mChunk);
-
-					Console.println(bp + " - READ");
-				}
-			}
-		}
-	}
+//	private void sync(boolean aFinal) throws IOException
+//	{
+//		if (LOG)
+//		{
+////			Console.println("\tSync pos: %d, size: %d, final: %d, posChunk: %d, indexChunk: %d, mod: %d", mPosition, mLength, aFinal, posInChunk(), mPosition / mLeafBlockSize, mChunkModified);
+//		}
+//
+//		if (posInChunk() == 0 || mChunkIndex != mPosition / mLeafSize || aFinal)
+//		{
+//			if (mChunkModified)
+//			{
+//				int len = (int)Math.min(mLeafSize, mLength - mLeafSize * mChunkIndex);
+//
+//				if (LOG)
+//				{
+////					Console.println("\tWrite chunk %d, %d bytes", mChunkIndex, len);
+//				}
+//
+//				if (mChunkIndex * SIZE < mIndirectBlock.capacity() && mIndirectBlock.position(mChunkIndex * SIZE).peekInt8() != BlockType.LOB_HOLE && mIndirectBlock.position(mChunkIndex * SIZE).peekInt8() != BlockType.HOLE)
+//				{
+//					BlockPointer bp = new BlockPointer().unmarshalBuffer(mIndirectBlock);
+//					mBlockAccessor.freeBlock(bp);
+//					if (LOG) Console.println(bp + " - FREE");
+//				}
+//
+//				BlockPointer bp = mBlockAccessor.writeBlock(mChunk, 0, len, BlockType.LOB_LEAF, 0, mCompressor);
+//				if (bp.getPhysicalSize() == 0)
+//				{
+//					bp.setBlockType(BlockType.LOB_HOLE);
+//				}
+//				if (LOG) Console.println(bp + " - WRITE");
+//
+//				mIndirectBlock.ensureCapacity(((mChunkIndex + 1) * SIZE + mLeafSize - 1) / mLeafSize * mLeafSize);
+//				mIndirectBlock.position(mChunkIndex * SIZE).write(bp.marshal());
+//			}
+//
+//			if (!aFinal)
+//			{
+//				Arrays.fill(mChunk, (byte)0);
+//
+//				mChunkIndex = (int)(mPosition / mLeafSize);
+//				mChunkModified = false;
+//
+//				BlockPointer bp = mChunkIndex * SIZE >= mIndirectBlock.capacity() ? null : new BlockPointer().unmarshalBuffer(mIndirectBlock.position(mChunkIndex * SIZE));
+//
+//				if (bp != null && bp.getPhysicalSize() > 0)
+//				{
+//					if (LOG)
+//					{
+////						Console.println("\tRead chunk %d", mChunkIndex);
+//					}
+//
+//					mBlockAccessor.readBlock(bp, mChunk);
+//					if (LOG) Console.println(bp + " - READ");
+//				}
+//			}
+//		}
+//	}
 
 
 	public void delete()
 	{
-		mIndirectBlock.position(0);
-		for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
-		{
-			mBlockAccessor.freeBlock(new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE])));
-		}
-
-		mBlockAccessor.freeBlock(mIndirectBlockPointer);
-
-		mLength = 0;
-		mIndirectBlockPointer = null;
-		mPosition = 0;
-		mModified = true;
-		mChunkModified = false;
-		mChunkIndex = 0;
-		mClosed = true;
-
-		if (mChunk != null)
-		{
-			Arrays.fill(mChunk, (byte)0);
-		}
+//		mIndirectBlock.position(0);
+//		for (int i = 0; i < mIndirectBlock.capacity(); i += SIZE)
+//		{
+//			mBlockAccessor.freeBlock(new BlockPointer().unmarshal(mIndirectBlock.read(new byte[SIZE])));
+//		}
+//
+//		mBlockAccessor.freeBlock(mIndirectBlockPointer);
+//
+//		mLength = 0;
+//		mIndirectBlockPointer = null;
+//		mPosition = 0;
+//		mModified = true;
+//		mChunkModified = false;
+//		mChunkIndex = 0;
+//		mClosed = true;
+//
+//		if (mChunk != null)
+//		{
+//			Arrays.fill(mChunk, (byte)0);
+//		}
 	}
 
 
@@ -650,7 +644,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 	private int posInChunk()
 	{
-		return (int)(mPosition & (mLeafBlockSize - 1));
+		return (int)(mPosition & (mLeafSize - 1));
 	}
 
 
@@ -669,9 +663,9 @@ public class LobByteChannel implements SeekableByteChannel
 	{
 		if (getMetadata().containsKey(METADATA_ALLOCATED_SIZE))
 		{
-			return Console.format("{alloc=%d, phys=%d, logic=%d, pointer=%S}", getMetadata().get(METADATA_ALLOCATED_SIZE), getMetadata().get(METADATA_PHYSICAL_SIZE), mHeader.get(IX_LOGICAL_SIZE, 0L), new BlockPointer().unmarshal(mHeader.get(IX_POINTER)));
+			return Console.format("{alloc=%d, phys=%d, logic=%d, pointer=%S}", getMetadata().get(METADATA_ALLOCATED_SIZE), getMetadata().get(METADATA_PHYSICAL_SIZE), mHeader.get(IX_LENGTH, 0L), new BlockPointer().unmarshal(mHeader.get(IX_POINTER)));
 		}
-		return Console.format("{logic=%d, pointer=%S}", mHeader.get(IX_LOGICAL_SIZE, 0L), new BlockPointer().unmarshal(mHeader.get(IX_POINTER)));
+		return Console.format("{logic=%d, pointer=%S}", mHeader.get(IX_LENGTH, 0L), new BlockPointer().unmarshal(mHeader.get(IX_POINTER)));
 	}
 
 

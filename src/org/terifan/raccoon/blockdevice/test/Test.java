@@ -1,9 +1,13 @@
 package org.terifan.raccoon.blockdevice.test;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.terifan.raccoon.blockdevice.BlockAccessor;
 import org.terifan.raccoon.blockdevice.LobByteChannel;
 import org.terifan.raccoon.blockdevice.LobOpenOption;
@@ -40,12 +44,13 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, true, 2048, CompressorAlgorithm.DEFLATE_BEST))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, true, 4, 2048, CompressorAlgorithm.DEFLATE_BEST))
 				{
 					lob.position(4100);
 					lob.writeAllBytes(output);
 				}
 				dev.getMetadata().put("lob", header);
+				System.out.println(header);
 				dev.commit();
 			}
 			Log.setLevel(LogLevel.FATAL);
@@ -100,7 +105,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, false, 512, CompressorAlgorithm.LZJB))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, false, 4, 512, CompressorAlgorithm.LZJB))
 				{
 					for (int i = 0; i < 1; i++)
 					{
