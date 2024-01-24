@@ -2,11 +2,13 @@ package org.terifan.raccoon.blockdevice;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
-import org.terifan.raccoon.blockdevice.util.Log;
-import org.terifan.raccoon.blockdevice.util.LogLevel;
+import org.terifan.logging.Level;
+import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 import org.terifan.raccoon.document.Document;
 import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
@@ -17,11 +19,11 @@ public class LobByteChannelNGTest
 	@Test
 	public void testSomeMethod1() throws IOException
 	{
-		Log.setLevel(LogLevel.DEBUG);
+		Logger.getLogger().setLevel(Level.OFF);
 
-		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(512);
+		MemoryBlockStorage blockStorage = new MemoryBlockStorage(512);
 
-		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 		{
 			Document header = new Document();
 			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
@@ -31,8 +33,9 @@ public class LobByteChannelNGTest
 					byte[] data = new byte[1024];
 					new Random().nextBytes(data);
 					lob.writeAllBytes(data);
-					lob.position(1024 * 1024 + 1024);
+					lob.position(1000_000);
 					lob.writeAllBytes(data);
+					lob.writeAllBytes(new byte[1024 * 1024]);
 				}
 			}
 
@@ -40,84 +43,78 @@ public class LobByteChannelNGTest
 			dev.commit();
 		}
 
-		System.out.println(memoryBlockDevice.size());
-//		memoryBlockDevice.dump();
-	}
-
-
-	@Test(enabled = false)
-	public void testSomeMethod() throws IOException
-	{
-//		Log.setLevel(LogLevel.DEBUG);
-
-		for (int i = 0; i < 1200; i++)
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 		{
-			System.out.println(i);
-			for (int j = 0; j < 1200; j++)
+			try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), dev.getMetadata().get("lob"), LobOpenOption.READ))
 			{
-				for (int k = 0; k < 1200; k++)
-				{
-					test(512, i, j, k);
-				}
+				byte[] data1 = new byte[1024];
+				byte[] data2 = new byte[1024];
+				byte[] data3 = new byte[1024 * 1024];
+				lob.position(0);
+				lob.readAllBytes(data1);
+				lob.position(1000_000);
+				lob.readAllBytes(data2);
+				lob.readAllBytes(data3);
+				assertEquals(data1, data2);
+				assertEquals(data3, new byte[1024 * 1024]);
+
+//				lob.scan();
 			}
-		}
-	}
-
-
-	private void test(int aBlockSize, int... aLengths) throws IOException
-	{
-		byte[] chunk1 = new byte[aLengths[0]];
-		byte[] chunk2 = new byte[aLengths[1]];
-		byte[] chunk3 = new byte[aLengths[2]];
-		new Random(1).nextBytes(chunk1);
-		new Random(2).nextBytes(chunk3);
-
-		MemoryBlockStorage memoryBlockDevice = new MemoryBlockStorage(512);
-
-//		Files.deleteIfExists(Paths.get("d:\\test.dev"));
-
-//		try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false)))
-		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
-		{
-			Document header = new Document();
-			header.put("blockSize", aBlockSize);
-			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
-			{
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE))
-				{
-					lob.writeAllBytes(chunk1);
-					lob.writeAllBytes(chunk2);
-					lob.writeAllBytes(chunk3);
-				}
-			}
-			dev.getMetadata().put("lob", header);
 			dev.commit();
 		}
 
-//		try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"), 512, false)))
-		try (ManagedBlockDevice dev = new ManagedBlockDevice(memoryBlockDevice))
-		{
-			Document header = dev.getMetadata().getDocument("lob");
-			try (BlockAccessor blockAccessor = new BlockAccessor(dev))
-			{
-				byte[] tmp1 = new byte[aLengths[0]];
-				byte[] tmp2 = new byte[aLengths[1]];
-				byte[] tmp3 = new byte[aLengths[2]];
+		System.out.println(blockStorage.size());
+	}
 
-				try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ))
+
+	@Test
+	public void testRandomWritesWithAlotOfHoles() throws IOException
+	{
+		Logger.getLogger().setLevel(Level.OFF);
+
+		Random rnd = new Random(1);
+		MemoryBlockStorage blockStorage = new MemoryBlockStorage(512);
+		byte[] buffer = new byte[1024 * 1024 * 10];
+
+		for (int test = 0; test < 10; test++)
+		{
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			{
+				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, false, 1024, 1024, CompressorAlgorithm.ZLE, CompressorAlgorithm.LZJB))
 				{
-					lob.read(ByteBuffer.wrap(tmp1));
-					lob.read(ByteBuffer.wrap(tmp2));
-					lob.read(ByteBuffer.wrap(tmp3));
+					for (int i = 0; i < 1000; i++)
+					{
+						byte[] data = new byte[rnd.nextInt(50000)];
+						if (i < 500 && rnd.nextInt(100) < 50)
+						{
+							rnd.nextBytes(data);
+						}
+
+						int pos = rnd.nextInt(buffer.length - data.length);
+						lob.position(pos);
+						lob.writeAllBytes(data);
+
+						System.arraycopy(data, 0, buffer, pos, data.length);
+					}
 				}
 
-//				Log.hexDump(tmp1);
-//				Log.hexDump(tmp2);
-//				Log.hexDump(tmp3);
+				dev.getMetadata().put("lob", header);
+				dev.commit();
+			}
+		}
 
-				assertEquals(tmp1, chunk1);
-				assertEquals(tmp2, chunk2);
-				assertEquals(tmp3, chunk3);
+		try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+		{
+			Document header = dev.getMetadata().get("lob");
+			try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+			{
+				byte[] tmp = lob.readAllBytes();
+
+				assertEquals(buffer, Arrays.copyOfRange(tmp, 0, buffer.length));
+
+//				lob.scan();
 			}
 		}
 	}

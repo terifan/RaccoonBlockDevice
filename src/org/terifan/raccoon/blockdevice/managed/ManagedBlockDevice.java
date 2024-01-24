@@ -1,14 +1,16 @@
 package org.terifan.raccoon.blockdevice.managed;
 
 import java.io.IOException;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
-import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 
 public class ManagedBlockDevice implements AutoCloseable
 {
+	private final Logger log = Logger.getLogger();
+
 	private BlockStorage mBlockStorage;
 	private SuperBlock mSuperBlock;
 	private int mBlockSize;
@@ -57,8 +59,8 @@ public class ManagedBlockDevice implements AutoCloseable
 
 	private void createBlockDevice() throws IOException
 	{
-		Log.i("create block device");
-		Log.inc();
+		log.i("create block device");
+		log.inc();
 
 		mSpaceMap = new SpaceMap();
 		mSuperBlock = new SuperBlock(-1L); // counter is incremented in writeSuperBlock method and we want to ensure we write block 0 before block 1
@@ -74,20 +76,20 @@ public class ManagedBlockDevice implements AutoCloseable
 		writeSuperBlock();
 		writeSuperBlock();
 
-		Log.dec();
+		log.dec();
 	}
 
 
 	private void loadBlockDevice() throws IOException
 	{
-		Log.i("load block device");
-		Log.inc();
+		log.i("load block device");
+		log.inc();
 
 		readSuperBlock();
 
 		mSpaceMap = new SpaceMap(mSuperBlock, this, mBlockStorage);
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -206,7 +208,7 @@ public class ManagedBlockDevice implements AutoCloseable
 
 	void freeBlockInternal(long aBlockIndex, int aBlockCount)
 	{
-		Log.d("free block %d +%d", aBlockIndex, aBlockCount);
+		log.t("free block {} +{}", aBlockIndex, aBlockCount);
 
 		mModified = true;
 
@@ -245,12 +247,12 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		mModified = true;
 
-		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
-		Log.inc();
+		log.t("write block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
+		log.inc();
 
 		mBlockStorage.writeBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -276,12 +278,12 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		mSpaceMap.assertUsed(aBlockIndex, aBufferLength / mBlockSize);
 
-		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
-		Log.inc();
+		log.t("read block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
+		log.inc();
 
 		mBlockStorage.readBlock(aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aBlockKey);
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -294,8 +296,8 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		if (mModified)
 		{
-			Log.i("committing managed block device");
-			Log.inc();
+			log.d("committing managed block device");
+			log.inc();
 
 			mSpaceMap.write(mSuperBlock.getSpaceMapPointer(), this, mBlockStorage);
 
@@ -309,7 +311,7 @@ public class ManagedBlockDevice implements AutoCloseable
 			mWasCreated = false;
 			mModified = false;
 
-			Log.dec();
+			log.dec();
 		}
 	}
 
@@ -330,8 +332,8 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		if (mModified)
 		{
-			Log.i("rollbacking block device");
-			Log.inc();
+			log.i("rollbacking block device");
+			log.inc();
 
 			mSpaceMap.reset();
 			mSpaceMap.rollback();
@@ -340,15 +342,15 @@ public class ManagedBlockDevice implements AutoCloseable
 
 			mModified = false;
 
-			Log.dec();
+			log.dec();
 		}
 	}
 
 
 	private void readSuperBlock() throws IOException
 	{
-		Log.d("read super block");
-		Log.inc();
+		log.d("read super block");
+		log.inc();
 
 		SuperBlock superBlockOne = new SuperBlock(-1L);
 		SuperBlock superBlockTwo = new SuperBlock(-1L);
@@ -361,21 +363,21 @@ public class ManagedBlockDevice implements AutoCloseable
 			mSuperBlock = superBlockOne;
 			mMetadata = metadataOne;
 
-			Log.d("using super block 0");
+			log.t("using super block 0");
 		}
 		else if (superBlockTwo.getGeneration() == superBlockOne.getGeneration() + 1)
 		{
 			mSuperBlock = superBlockTwo;
 			mMetadata = metadataTwo;
 
-			Log.d("using super block 1");
+			log.t("using super block 1");
 		}
 		else
 		{
 			throw new IOException("BlockDevice appears to be corrupt. SuperBlock versions are illegal: " + superBlockOne.getGeneration() + " / " + superBlockTwo.getGeneration());
 		}
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -383,12 +385,12 @@ public class ManagedBlockDevice implements AutoCloseable
 	{
 		int index = (int)(mSuperBlock.incrementGeneration() & 1);
 
-		Log.i("write super block %d", index);
-		Log.inc();
+		log.d("write super block {}", index);
+		log.inc();
 
 		mSuperBlock.write(mBlockStorage, index, mMetadata);
 
-		Log.dec();
+		log.dec();
 	}
 
 

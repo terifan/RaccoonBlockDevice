@@ -7,7 +7,7 @@ import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
-import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.messagedigest.SHA3;
 import org.terifan.raccoon.security.random.SecureRandom;
@@ -16,6 +16,8 @@ import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
 class SpaceMap
 {
+	private final Logger log = Logger.getLogger();
+
 	private final static SecureRandom PRNG = new SecureRandom();
 	private HashSet<Long> mUncommittedAllocations;
 	private RangeMap mPendingRangeMap;
@@ -57,7 +59,7 @@ class SpaceMap
 			return -1;
 		}
 
-		Log.d("alloc block %d +%d", blockIndex, aBlockCount);
+		log.t("alloc block {} +{}", blockIndex, aBlockCount);
 
 		for (int i = 0; i < aBlockCount; i++)
 		{
@@ -109,8 +111,8 @@ class SpaceMap
 
 	public void write(BlockPointer aSpaceMapBlockPointer, ManagedBlockDevice aBlockDevice, BlockStorage aBlockDeviceDirect)
 	{
-		Log.d("write space map");
-		Log.inc();
+		log.d("write space map");
+		log.inc();
 
 		int blockSize = aBlockDevice.getBlockSize();
 
@@ -145,7 +147,7 @@ class SpaceMap
 
 		mRangeMap = mPendingRangeMap.clone();
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -153,8 +155,8 @@ class SpaceMap
 	{
 		BlockPointer blockPointer = aSuperBlock.getSpaceMapPointer();
 
-		Log.d("read space map %d +%d (bytes used %d)", blockPointer.getBlockIndex0(), blockPointer.getAllocatedSize() / aBlockDevice.getBlockSize(), blockPointer.getLogicalSize());
-		Log.inc();
+		log.d("read space map {} +{} (bytes used {})", blockPointer.getBlockIndex0(), blockPointer.getAllocatedSize() / aBlockDevice.getBlockSize(), blockPointer.getLogicalSize());
+		log.inc();
 
 		RangeMap rangeMap = new RangeMap();
 
@@ -190,7 +192,7 @@ class SpaceMap
 			rangeMap.remove((int)blockPointer.getBlockIndex0(), blockPointer.getAllocatedSize() / blockSize);
 		}
 
-		Log.dec();
+		log.dec();
 
 		return rangeMap;
 	}

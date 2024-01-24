@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.compressor;
 
 import org.terifan.raccoon.blockdevice.compressor.ByteBlockOutputStream;
 import org.terifan.raccoon.blockdevice.compressor.ZLE;

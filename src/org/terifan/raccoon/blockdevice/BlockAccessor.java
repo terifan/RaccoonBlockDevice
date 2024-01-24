@@ -4,13 +4,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import org.terifan.raccoon.blockdevice.compressor.ByteBlockOutputStream;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
-import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.security.random.ISAAC;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 
 public class BlockAccessor implements AutoCloseable
 {
+	private final Logger log = Logger.getLogger();
+
 	private final static ISAAC PRNG = new ISAAC();
 	private final ManagedBlockDevice mBlockDevice;
 	private final boolean mCloseUnderlyingDevice;
@@ -64,13 +66,13 @@ public class BlockAccessor implements AutoCloseable
 
 		try
 		{
-			Log.d("free block %S", aBlockPointer);
-			Log.inc();
+			log.t("free block {}", aBlockPointer);
+			log.inc();
 
 			mBlockDevice.freeBlock(aBlockPointer.getBlockIndex0(), aBlockPointer.getAllocatedSize() / mBlockDevice.getBlockSize());
 
 //			assert collectStatistics(FREE_BLOCK, aBlockPointer.getAllocatedSize());
-			Log.dec();
+			log.dec();
 		}
 		catch (Exception | Error e)
 		{
@@ -92,7 +94,7 @@ public class BlockAccessor implements AutoCloseable
 
 	public synchronized byte[] readBlock(BlockPointer aBlockPointer, final byte[] aBuffer)
 	{
-		Log.d("read block  %S", aBlockPointer);
+		log.t("read block {}", aBlockPointer);
 
 		if (aBlockPointer.getPhysicalSize() > aBuffer.length)
 		{
@@ -104,7 +106,7 @@ public class BlockAccessor implements AutoCloseable
 			return new byte[aBlockPointer.getLogicalSize()];
 		}
 
-		Log.inc();
+		log.inc();
 
 		mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), aBuffer, 0, aBlockPointer.getAllocatedSize(), aBlockPointer.getBlockKey());
 
@@ -123,7 +125,7 @@ public class BlockAccessor implements AutoCloseable
 		}
 
 //		assert collectStatistics(READ_BLOCK, buffer.length);
-		Log.dec();
+		log.dec();
 
 		return aBuffer;
 	}
@@ -134,13 +136,14 @@ public class BlockAccessor implements AutoCloseable
 		if (isAllZeros(aBuffer, aOffset, aLength))
 		{
 			BlockPointer blockPointer = new BlockPointer()
-				.setBlockType(aBlockType)
+//				.setBlockType(aBlockType)
+				.setBlockType(BlockType.HOLE)
 				.setBlockLevel(aBlockLevel)
 				.setLogicalSize(aLength)
 				.setBlockIndex0(0)
 				.setGeneration(mBlockDevice.getGeneration());
 
-			Log.d("write block %S", blockPointer);
+			log.t("write block {}", blockPointer);
 
 			return blockPointer;
 		}
@@ -198,13 +201,13 @@ public class BlockAccessor implements AutoCloseable
 				.setChecksum(checksum)
 				.setGeneration(mBlockDevice.getGeneration());
 
-			Log.d("write block %S", blockPointer);
-			Log.inc();
+			log.t("write block {}", blockPointer);
+			log.inc();
 
 			mBlockDevice.writeBlock(blockIndex, output, 0, output.length, blockPointer.getBlockKey());
 
 //			assert collectStatistics(WRITE_BLOCK, aBuffer.length);
-			Log.dec();
+			log.dec();
 
 			return blockPointer;
 		}

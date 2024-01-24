@@ -9,13 +9,15 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.managed.SyncMode;
-import org.terifan.raccoon.blockdevice.util.Log;
 
 
 public class FileBlockStorage implements BlockStorage
 {
+	private final Logger log = Logger.getLogger();
+
 	protected Path mPath;
 	protected FileChannel mFileChannel;
 	protected FileLock mFileLock;
@@ -77,7 +79,7 @@ public class FileBlockStorage implements BlockStorage
 
 	public void readBlock(long aBlockIndex, ByteBuffer aBuffer, long[] aBlockKey)
 	{
-		Log.d("read block %d +%d", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
+		log.t("read block {} +{}", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
 
 		try
 		{
@@ -92,7 +94,7 @@ public class FileBlockStorage implements BlockStorage
 
 	public void writeBlock(long aBlockIndex, ByteBuffer aBuffer, long[] aBlockKey)
 	{
-		Log.d("write block %d +%d", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
+		log.t("write block {} +{}", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
 
 		try
 		{
@@ -108,7 +110,7 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
-		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
+		log.t("read block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		try
 		{
@@ -125,7 +127,7 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
-		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
+		log.t("write block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		try
 		{
@@ -142,7 +144,7 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void close()
 	{
-		Log.d("close");
+		log.d("close");
 
 		synchronized (this)
 		{
@@ -168,7 +170,7 @@ public class FileBlockStorage implements BlockStorage
 				}
 				catch (Throwable e)
 				{
-					Log.e("Unhandled error when releasing file lock", e);
+					log.e("Unhandled error when releasing file lock", e);
 				}
 			}
 
@@ -216,7 +218,7 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void commit(int aIndex, boolean aMetadata)
 	{
-		Log.d("commit");
+		log.d("commit");
 
 		if (aIndex == 0 && mSyncMode != SyncMode.OFF || aIndex == 1 && mSyncMode == SyncMode.DOUBLE)
 		{

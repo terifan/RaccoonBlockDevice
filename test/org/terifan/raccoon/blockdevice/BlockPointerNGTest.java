@@ -1,6 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
-import org.terifan.raccoon.blockdevice.util.Log;
+import org.terifan.logging.Level;
+import org.terifan.logging.Logger;
 import org.testng.annotations.Test;
 
 
@@ -24,6 +25,6 @@ public class BlockPointerNGTest
 			;
 
 		System.out.println(bp.marshal().length);
-		Log.hexDump(bp.marshal());
+		Logger.getLogger().hexDump(Level.INFO, bp.marshal());
 	}
 }

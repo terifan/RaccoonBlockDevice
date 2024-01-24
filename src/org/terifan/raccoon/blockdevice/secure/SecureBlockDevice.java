@@ -4,10 +4,10 @@ import org.terifan.raccoon.security.cryptography.BlockCipher;
 import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.cryptography.SecretKey;
 import static java.util.Arrays.fill;
+import org.terifan.logging.Logger;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getBytes;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
-import org.terifan.raccoon.blockdevice.util.Log;
 import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
 import org.terifan.raccoon.security.random.ISAAC.PRNG;
 import org.terifan.raccoon.security.random.SecureRandom;
@@ -22,6 +22,8 @@ import org.terifan.raccoon.blockdevice.storage.BlockStorage;
  */
 public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 {
+	private final static Logger log = Logger.getLogger();
+
 	private final static int SALT_SIZE = 256;
 	private final static int PAYLOAD_SIZE = 256;
 	private final static int HEADER_SIZE = 4;
@@ -51,8 +53,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 		if (mBlockDevice.size() == 0)
 		{
-			Log.i("create boot block");
-			Log.inc();
+			log.i("create boot block");
+			log.inc();
 
 			for (boolean valid = false; !valid;)
 			{
@@ -77,7 +79,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 				}
 			}
 
-			Log.dec();
+			log.dec();
 		}
 		else
 		{
@@ -87,8 +89,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 			for (int index = 0; index < mBootBlockCount; index++)
 			{
-				Log.i("open boot block #%s", index);
-				Log.inc();
+				log.i("open boot block #{}", index);
+				log.inc();
 
 				mBlockDevice.readBlock(index, blockData, 0, blockData.length, new int[4]);
 
@@ -99,7 +101,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 					break;
 				}
 
-				Log.dec();
+				log.dec();
 			}
 
 			if (mCipherImplementation == null)
@@ -172,7 +174,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 					// verify checksum of boot block
 					if (expectedChecksum == computeChecksum(salt, payloadCopy))
 					{
-						Log.dec();
+						log.dec();
 
 						// when a boot block is created it's also verified
 						if (aVerifyFunctions && (aAccessCredentials.getKeyGeneratorFunction() != keyGenerator || aAccessCredentials.getEncryptionFunction() != encryption))
@@ -190,8 +192,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 			}
 		}
 
-		Log.w("incorrect password or not a secure BlockDevice");
-		Log.dec();
+		log.w("incorrect password or not a secure BlockDevice");
+		log.dec();
 
 		return null;
 	}
@@ -209,8 +211,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		assert aBlockIndex >= 0;
 		assert aIV.length == 4;
 
-		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
-		Log.inc();
+		log.d("write block {} +{}", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
+		log.inc();
 
 		byte[] workBuffer = aBuffer.clone();
 
@@ -218,7 +220,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 		mBlockDevice.writeBlock(mBootBlockCount + aBlockIndex, workBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
 
-		Log.dec();
+		log.dec();
 	}
 
 
@@ -228,14 +230,14 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		assert aBlockIndex >= 0;
 		assert aIV.length == 4;
 
-		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
-		Log.inc();
+		log.d("read block {} +{}", aBlockIndex, aBufferLength / mBlockDevice.getBlockSize());
+		log.inc();
 
 		mBlockDevice.readBlock(mBootBlockCount + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, (int[])null); // block key is used by this blockdevice and not passed to lower levels
 
 		mCipherImplementation.decrypt(mBootBlockCount + aBlockIndex, aBuffer, aBufferOffset, aBufferLength, aIV);
 
-		Log.dec();
+		log.dec();
 	}
 
 

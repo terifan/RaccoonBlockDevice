@@ -1,6 +1,5 @@
 package org.terifan.raccoon.blockdevice.compressor;
 
-import java.io.IOException;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 
 

@@ -1,16 +1,21 @@
 package org.terifan.raccoon.blockdevice;
 
 import java.util.Arrays;
+import org.terifan.logging.LogStatement;
+import org.terifan.logging.LogStatementProducer;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt64;
-import org.terifan.raccoon.blockdevice.util.Console;
 
 
+@LogStatementProducer
 public final class BlockPointer
 {
+	private final Logger log = Logger.getLogger();
+
 	public final static int SIZE = 80;
 
 	private final static int OFS_FLAG_TYPE = 0;			// 1
@@ -251,7 +256,14 @@ public final class BlockPointer
 	@Override
 	public String toString()
 	{
-		return Console.format("{type=%s, level=%d, index=%d, alloc=%d, phys=%d, logic=%d, gen=%d, cmp=%d, chk=%d:%08x}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), getCompressionAlgorithm(), getChecksumAlgorithm(), 0xffffffffL & getChecksum()[0]);
+		return generateLog().toString();
+	}
+
+
+	@LogStatementProducer
+	private LogStatement generateLog()
+	{
+		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
 	}
 
 

@@ -6,12 +6,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.terifan.logging.Level;
+import org.terifan.logging.Logger;
 import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
-import org.terifan.raccoon.blockdevice.util.Log;
 
 
 public class MemoryBlockStorage implements BlockStorage
 {
+	private final Logger log = Logger.getLogger();
+
 	private final SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
 	private final int mBlockSize;
 
@@ -37,7 +40,7 @@ public class MemoryBlockStorage implements BlockStorage
 	@Override
 	public void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
-		Log.d("write block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
+		log.d("write block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		while (aBufferLength > 0)
 		{
@@ -53,7 +56,7 @@ public class MemoryBlockStorage implements BlockStorage
 	@Override
 	public void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
-		Log.d("read block %d +%d", aBlockIndex, aBufferLength / mBlockSize);
+		log.d("read block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		while (aBufferLength > 0)
 		{
@@ -127,8 +130,8 @@ public class MemoryBlockStorage implements BlockStorage
 	{
 		for (Entry<Long,byte[]> entry : mStorage.entrySet())
 		{
-			Log.out.println("Block #" + entry.getKey() + ":");
-			Log.hexDump(entry.getValue());
+			log.i("Block #{}:", entry.getKey());
+			log.hexDump(Level.INFO, entry.getValue(), 32);
 		}
 	}
 
@@ -137,8 +140,8 @@ public class MemoryBlockStorage implements BlockStorage
 	{
 		for (Entry<Long,byte[]> entry : mStorage.entrySet())
 		{
-			Log.out.println("Block #" + entry.getKey() + ":");
-			Log.hexDump(entry.getValue(), aWidth, null);
+			log.i("Block #{}:", entry.getKey());
+			log.hexDump(Level.INFO, entry.getValue(), aWidth);
 		}
 	}
 }
