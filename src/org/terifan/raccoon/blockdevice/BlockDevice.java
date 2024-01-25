@@ -3,6 +3,9 @@ package org.terifan.raccoon.blockdevice;
 
 public interface BlockDevice extends AutoCloseable
 {
+	boolean isReadOnly();
+
+
 	/**
 	 * Read a single block from the device.
 	 *

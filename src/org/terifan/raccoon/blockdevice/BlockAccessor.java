@@ -47,6 +47,12 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
+	public boolean isReadOnly()
+	{
+		return mBlockDevice.isReadOnly();
+	}
+
+
 	@Override
 	public void close() throws IOException
 	{

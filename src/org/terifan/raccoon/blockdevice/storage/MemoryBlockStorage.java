@@ -31,6 +31,13 @@ public class MemoryBlockStorage implements BlockStorage
 	}
 
 
+	@Override
+	public boolean isReadOnly()
+	{
+		return false;
+	}
+
+
 	public Map<Long, byte[]> getStorage()
 	{
 		return mStorage;

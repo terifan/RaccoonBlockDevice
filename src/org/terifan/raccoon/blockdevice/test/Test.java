@@ -36,8 +36,8 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, false, 1024, 1024, CompressorAlgorithm.ZLE, CompressorAlgorithm.LZJB))
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> Document.of("leaf:1024,node:1024,compress=lzjb"));
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
 				{
 					byte[] data = new byte[8192];
 					new Random().nextBytes(data);
@@ -55,7 +55,7 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
 				{
 					byte[] data1 = new byte[8192];
@@ -73,7 +73,7 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
 				{
 					byte[] data = new byte[8192];
@@ -91,7 +91,7 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
 				{
 					byte[] data1 = new byte[8192];
@@ -116,7 +116,7 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
 				{
 					for (int i = 0; i < 1000; i++)
@@ -141,7 +141,7 @@ public class Test
 
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
 				{
 					byte[] tmp = lob.readAllBytes();
@@ -176,7 +176,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, true, 512, 1024, CompressorAlgorithm.NONE, CompressorAlgorithm.NONE))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
 				{
 					lob.writeAllBytes(a);
 					lob.flush();
@@ -279,7 +279,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, true, 512, 1024, CompressorAlgorithm.ZLE, CompressorAlgorithm.DEFLATE_BEST))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
 				{
 					lob.position(2 * 1024 + 100);
 					lob.writeAllBytes(output);
@@ -342,7 +342,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, false, 4, 512, CompressorAlgorithm.ZLE, CompressorAlgorithm.DEFLATE_BEST))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
 				{
 					for (int i = 0; i < 1; i++)
 					{

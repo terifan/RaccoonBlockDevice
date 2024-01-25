@@ -23,6 +23,7 @@ public class FileBlockStorage implements BlockStorage
 	protected FileLock mFileLock;
 	protected SyncMode mSyncMode;
 	protected int mBlockSize;
+	private final boolean mReadOnly;
 
 
 	public FileBlockStorage(Path aPath)
@@ -42,10 +43,11 @@ public class FileBlockStorage implements BlockStorage
 		mPath = aPath;
 		mBlockSize = aBlockSize;
 		mSyncMode = SyncMode.DOUBLE;
+		mReadOnly = aReadOnly;
 
 		try
 		{
-			if (aReadOnly)
+			if (mReadOnly)
 			{
 				mFileChannel = FileChannel.open(mPath, StandardOpenOption.CREATE, StandardOpenOption.READ);
 			}
@@ -74,6 +76,12 @@ public class FileBlockStorage implements BlockStorage
 		{
 			throw new RaccoonDeviceException(e);
 		}
+	}
+
+
+	public boolean isReadOnly()
+	{
+		return mReadOnly;
 	}
 
 

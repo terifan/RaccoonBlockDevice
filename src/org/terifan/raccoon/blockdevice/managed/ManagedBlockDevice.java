@@ -160,6 +160,12 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
+	public boolean isReadOnly()
+	{
+		return mBlockStorage.isReadOnly();
+	}
+
+
 	public int getBlockSize()
 	{
 		return mBlockSize;

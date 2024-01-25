@@ -206,6 +206,13 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 
 	@Override
+	public boolean isReadOnly()
+	{
+		return mBlockDevice.isReadOnly();
+	}
+
+
+	@Override
 	public void writeBlock(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength, final int[] aIV)
 	{
 		assert aBlockIndex >= 0;

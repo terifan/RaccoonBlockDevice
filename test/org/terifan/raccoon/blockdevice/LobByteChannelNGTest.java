@@ -80,9 +80,9 @@ public class LobByteChannelNGTest
 		{
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", () -> new Document());
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, false, 1024, 1024, CompressorAlgorithm.ZLE, CompressorAlgorithm.LZJB))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
 				{
 					for (int i = 0; i < 1000; i++)
 					{
