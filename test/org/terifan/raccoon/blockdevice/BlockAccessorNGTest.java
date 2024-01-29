@@ -24,7 +24,7 @@ public class BlockAccessorNGTest
 
 		ManagedBlockDevice managedBlockDevice = new ManagedBlockDevice(blockDevice);
 		BlockAccessor blockAccessor = new BlockAccessor(managedBlockDevice, true);
-		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, BlockType.BTREE_NODE, 0, CompressorAlgorithm.ZLE);
+		BlockPointer blockPointer = blockAccessor.writeBlock(in, 100, length, BlockType.BTREE_NODE, 0, CompressorAlgorithm.ZLE.ordinal());
 		managedBlockDevice.commit();
 
 		assertEquals(2 + 1 + 3, managedBlockDevice.getAllocatedSpace()); // 2 superblock + 1 spacemap + 3 data

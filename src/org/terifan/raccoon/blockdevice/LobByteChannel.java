@@ -6,11 +6,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SeekableByteChannel;
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.function.Consumer;
-import org.terifan.logging.LogStatement;
-import org.terifan.logging.LogStatementProducer;
 import org.terifan.logging.Logger;
 import org.terifan.logging.Unit;
 import org.terifan.raccoon.document.Document;
@@ -35,13 +31,14 @@ public class LobByteChannel implements SeekableByteChannel
 	private final static String IX_NODES_PER_PAGE = "4";
 	private final static String IX_COMPRESSION = "5";
 	private final static String IX_POINTER = "6";
+	private final static String IX_METADATA = "7";
 
 	private BlockAccessor mBlockAccessor;
 	private Consumer<LobByteChannel> mCloseAction;
 	private Document mHeader;
 	private boolean mClosed;
 	private long mLength;
-	private Page mRoot;
+	private LobPage mRoot;
 	private long mPosition;
 
 	int mNodeSize;
@@ -50,7 +47,17 @@ public class LobByteChannel implements SeekableByteChannel
 	int mNodesPerPage;
 
 
-	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption) throws IOException
+	/**
+	 * Create or open a LobByteChannel
+	 *
+	 * @param aOptions a Document with options for creating the LobByteChannel
+	 * <li><b>leaf</b> - Size of a leaf node. Integer. Default block size, multiple of block size.
+	 * <li><b>node</b> - Size of an interior node. Integer. Default block size, multiple of block size.
+	 * <li><b>compression</b> - Name of a compressor. String. See {@link org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm}. Default lzjb.
+	 * <li><b>degree</b> - Number of pointers in an interior node, overrides node size. Integer. Default unspecified.
+	 * <li><b>record</b> - Size of a record. Integer. Default 128. Min 128, max 65000
+	 */
+	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Document aOptions) throws IOException
 	{
 		if (aHeader == null)
 		{
@@ -61,7 +68,7 @@ public class LobByteChannel implements SeekableByteChannel
 		mBlockAccessor = aBlockAccessor;
 		mNodeSize = mHeader.computeIfAbsent(IX_NODE_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 8192));
 		mLeafSize = mHeader.computeIfAbsent(IX_LEAF_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 128 * 1024));
-		mCompressor = mHeader.computeIfAbsent(IX_COMPRESSION, k -> CompressorAlgorithm.ZLE);
+		mCompressor = mHeader.computeIfAbsent(IX_COMPRESSION, k -> CompressorAlgorithm.ZLE.ordinal());
 		mLength = mHeader.computeIfAbsent(IX_LENGTH, k -> 0L);
 
 		int blockSize = mBlockAccessor.getBlockDevice().getBlockSize();
@@ -82,11 +89,11 @@ public class LobByteChannel implements SeekableByteChannel
 		byte[] pointer = mHeader.getBinary(IX_POINTER);
 		if (pointer != null)
 		{
-			mRoot = Page.load(this, new BlockPointer().unmarshal(pointer));
+			mRoot = LobPage.load(this, new BlockPointer().unmarshal(pointer));
 		}
 		else
 		{
-			mRoot = Page.create(this);
+			mRoot = LobPage.create(this);
 		}
 
 		if (aOpenOption == LobOpenOption.APPEND)
@@ -124,7 +131,7 @@ public class LobByteChannel implements SeekableByteChannel
 			int pos = posOnPage();
 			int len = Math.min(mLeafSize - pos, aDst.remaining());
 
-			Page page = mRoot;
+			LobPage page = mRoot;
 			while (page != null && page.mLevel > 0)
 			{
 				page = page.getChild(page.convertPageToChildIndex(pageIndex), false);
@@ -164,16 +171,16 @@ public class LobByteChannel implements SeekableByteChannel
 			int pos = posOnPage();
 			int len = Math.min(mLeafSize - pos, aSrc.remaining());
 
-			Page page = mRoot;
+			LobPage page = mRoot;
 			while (page.mLevel > 0)
 			{
-				page.mState = PageState.PENDING;
+				page.mState = LobPageState.PENDING;
 				page = page.getChild(page.convertPageToChildIndex(pageIndex), true);
 			}
 
 			aSrc.get(page.mBuffer, pos, len);
 
-			page.mState = PageState.PENDING;
+			page.mState = LobPageState.PENDING;
 
 			mPosition += len;
 			mLength = Math.max(mLength, mPosition);
@@ -271,7 +278,7 @@ public class LobByteChannel implements SeekableByteChannel
 			return;
 		}
 
-		if (mRoot.mState == PageState.PENDING)
+		if (mRoot.mState == LobPageState.PENDING)
 		{
 			log.d("flusing lob");
 			log.inc();
@@ -483,6 +490,19 @@ public class LobByteChannel implements SeekableByteChannel
 	}
 
 
+	public Document getMetadata()
+	{
+		return mHeader.computeIfAbsent(IX_METADATA, k -> new Document());
+	}
+
+
+	public LobByteChannel setMetadata(Document aDocument)
+	{
+		mHeader.put(IX_METADATA, aDocument);
+		return this;
+	}
+
+
 	@Override
 	public String toString()
 	{
@@ -498,10 +518,10 @@ public class LobByteChannel implements SeekableByteChannel
 		{
 			log.d("growing tree");
 
-			Page newRoot = Page.create(this);
-			newRoot.mState = PageState.PENDING;
+			LobPage newRoot = LobPage.create(this);
+			newRoot.mState = LobPageState.PENDING;
 			newRoot.mLevel = mRoot.mLevel + 1;
-			newRoot.mChildren = new Page[mNodesPerPage];
+			newRoot.mChildren = new LobPage[mNodesPerPage];
 			newRoot.mBuffer = new byte[mNodeSize];
 			newRoot.mChildren[0] = mRoot;
 			mRoot = newRoot;
@@ -520,13 +540,13 @@ public class LobByteChannel implements SeekableByteChannel
 	}
 
 
-	private void scan(Page aPage, int aLevel)
+	private void scan(LobPage aPage, int aLevel)
 	{
 		try (Unit _u = log.enter())
 		{
 			for (int i = 0; i < mNodesPerPage; i++)
 			{
-				Page child = aPage.getChild(i, false);
+				LobPage child = aPage.getChild(i, false);
 
 				if (child != null)
 				{

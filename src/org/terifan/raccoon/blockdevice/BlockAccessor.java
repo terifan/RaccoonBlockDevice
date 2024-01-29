@@ -107,18 +107,20 @@ public class BlockAccessor implements AutoCloseable
 			throw new IllegalArgumentException();
 		}
 
-		if (aBlockPointer.getPhysicalSize() == 0)
+		if (aBlockPointer.getBlockType() == BlockType.HOLE || aBlockPointer.getPhysicalSize() == 0)
 		{
 			return new byte[aBlockPointer.getLogicalSize()];
 		}
 
 		log.inc();
 
-		mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), aBuffer, 0, aBlockPointer.getAllocatedSize(), aBlockPointer.getBlockKey());
+		byte[] tmp = new byte[aBlockPointer.getAllocatedSize()];
 
-		if (!CompressorAlgorithm.decompress(aBlockPointer.getCompressionAlgorithm(), aBuffer, aBlockPointer.getPhysicalSize(), aBlockPointer.getLogicalSize()))
+		mBlockDevice.readBlock(aBlockPointer.getBlockIndex0(), tmp, 0, aBlockPointer.getAllocatedSize(), aBlockPointer.getBlockKey());
+
+		if (!CompressorAlgorithm.decompress(aBlockPointer.getCompressionAlgorithm(), tmp, aBlockPointer.getPhysicalSize(), aBuffer, aBlockPointer.getLogicalSize()))
 		{
-			throw new RaccoonIOException("Error decompressing data.");
+			throw new RaccoonIOException("Error decompressing data");
 		}
 
 		assert isAllZeros(aBuffer, aBlockPointer.getLogicalSize(), aBuffer.length - aBlockPointer.getLogicalSize());
@@ -142,7 +144,6 @@ public class BlockAccessor implements AutoCloseable
 		if (isAllZeros(aBuffer, aOffset, aLength))
 		{
 			BlockPointer blockPointer = new BlockPointer()
-//				.setBlockType(aBlockType)
 				.setBlockType(BlockType.HOLE)
 				.setBlockLevel(aBlockLevel)
 				.setLogicalSize(aLength)
@@ -164,7 +165,7 @@ public class BlockAccessor implements AutoCloseable
 			byte[] output = null;
 			int physicalSize = aLength;
 
-			if (aCompressorLevel != CompressorAlgorithm.NONE)
+			if (aCompressorLevel != CompressorAlgorithm.NONE.ordinal())
 			{
 				ByteBlockOutputStream tmp = new ByteBlockOutputStream(blockSize);
 				if (CompressorAlgorithm.compress(aCompressorLevel, aBuffer, aOffset, aLength, tmp))
@@ -184,7 +185,7 @@ public class BlockAccessor implements AutoCloseable
 
 			if (output == null)
 			{
-				aCompressorLevel = CompressorAlgorithm.NONE;
+				aCompressorLevel = CompressorAlgorithm.NONE.ordinal();
 				output = new byte[roundUp(aLength)];
 				System.arraycopy(aBuffer, aOffset, output, 0, aLength);
 				physicalSize = aLength;

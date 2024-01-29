@@ -8,40 +8,40 @@ import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 
 @LogStatementProducer
-class Page
+class LobPage
 {
 	private final static Logger log = Logger.getLogger();
 
 	private LobByteChannel mChannel;
 
-	PageState mState;
+	LobPageState mState;
 	BlockPointer mBlockPointer;
-	Page[] mChildren;
+	LobPage[] mChildren;
 	byte[] mBuffer;
 	int mLevel;
 
 
-	private Page(LobByteChannel aChannel)
+	private LobPage(LobByteChannel aChannel)
 	{
 		mChannel = aChannel;
 	}
 
 
-	public static Page create(LobByteChannel aChannel)
+	public static LobPage create(LobByteChannel aChannel)
 	{
-		Page page = new Page(aChannel);
+		LobPage page = new LobPage(aChannel);
 		page.mBuffer = new byte[aChannel.mLeafSize];
-		page.mState = PageState.PENDING;
+		page.mState = LobPageState.PENDING;
 		return page;
 	}
 
 
-	public static Page load(LobByteChannel aChannel, BlockPointer aBlockPointer)
+	public static LobPage load(LobByteChannel aChannel, BlockPointer aBlockPointer)
 	{
-		Page page = new Page(aChannel);
+		LobPage page = new LobPage(aChannel);
 		page.mLevel = aBlockPointer.getBlockLevel();
 		page.mBlockPointer = aBlockPointer;
-		page.mState = PageState.PERSISTED;
+		page.mState = LobPageState.PERSISTED;
 
 		if (aBlockPointer.getBlockType() == BlockType.HOLE)
 		{
@@ -54,7 +54,7 @@ class Page
 
 		if (page.mLevel > 0)
 		{
-			page.mChildren = new Page[aChannel.mNodesPerPage];
+			page.mChildren = new LobPage[aChannel.mNodesPerPage];
 		}
 
 		return page;
@@ -67,11 +67,11 @@ class Page
 	}
 
 
-	Page getChild(int aChildIndex, boolean aCreate)
+	LobPage getChild(int aChildIndex, boolean aCreate)
 	{
 		assert mLevel > 0;
 
-		Page page = mChildren[aChildIndex];
+		LobPage page = mChildren[aChildIndex];
 
 		if (page == null)
 		{
@@ -84,9 +84,9 @@ class Page
 					return null;
 				}
 
-				page = Page.create(mChannel);
+				page = LobPage.create(mChannel);
 				page.mLevel = mLevel - 1;
-				page.mState = PageState.PENDING;
+				page.mState = LobPageState.PENDING;
 
 				if (page.mLevel == 0)
 				{
@@ -94,13 +94,13 @@ class Page
 				}
 				else
 				{
-					page.mChildren = new Page[mChannel.mNodesPerPage];
+					page.mChildren = new LobPage[mChannel.mNodesPerPage];
 					page.mBuffer = new byte[mChannel.mNodeSize];
 				}
 			}
 			else
 			{
-				page = Page.load(mChannel, ptr);
+				page = LobPage.load(mChannel, ptr);
 			}
 
 			mChildren[aChildIndex] = page;
@@ -138,13 +138,13 @@ class Page
 	{
 		BlockAccessor blockAccessor = mChannel.getBlockAccessor();
 
-		if (mLevel > 0 && mState == PageState.PENDING)
+		if (mLevel > 0 && mState == LobPageState.PENDING)
 		{
 			boolean detectedData = false;
 
 			for (int i = 0; i < mChildren.length; i++)
 			{
-				Page child = mChildren[i];
+				LobPage child = mChildren[i];
 
 				if (child != null && child.flush())
 				{
@@ -165,7 +165,7 @@ class Page
 				boolean isHole = true;
 				for (int i = 0; i < mChildren.length; i++)
 				{
-					Page child = getChild(i, false);
+					LobPage child = getChild(i, false);
 					if (child != null && child.mBlockPointer != null && child.mBlockPointer.getBlockType() != BlockType.HOLE)
 					{
 						isHole = false;
@@ -175,14 +175,14 @@ class Page
 				if (isHole)
 				{
 					blockAccessor.freeBlock(mBlockPointer);
-					mState = PageState.PERSISTED;
+					mState = LobPageState.PERSISTED;
 					mBlockPointer = new BlockPointer().setBlockType(BlockType.HOLE).setBlockLevel(mLevel).setLogicalSize(mChannel.mNodeSize);
 					return true;
 				}
 			}
 		}
 
-		if (mState == PageState.PERSISTED)
+		if (mState == LobPageState.PERSISTED)
 		{
 			log.d("skipping clean page {}", mBlockPointer);
 			return false;
@@ -199,10 +199,10 @@ class Page
 		}
 		else
 		{
-			mBlockPointer = blockAccessor.writeBlock(mBuffer, 0, mBuffer.length, BlockType.LOB_NODE, mLevel, CompressorAlgorithm.ZLE);
+			mBlockPointer = blockAccessor.writeBlock(mBuffer, 0, mBuffer.length, BlockType.LOB_NODE, mLevel, CompressorAlgorithm.ZLE.ordinal());
 		}
 
-		mState = PageState.PERSISTED;
+		mState = LobPageState.PERSISTED;
 
 		log.d("page updated to {}", mBlockPointer);
 		log.dec();

@@ -2,7 +2,6 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import org.terifan.raccoon.blockdevice.BlockType;
 import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
@@ -12,6 +11,7 @@ import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.messagedigest.SHA3;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
+import org.terifan.raccoon.blockdevice.BlockType;
 
 
 class SpaceMap
@@ -130,7 +130,7 @@ class SpaceMap
 		long blockIndex = aBlockDevice.allocBlockInternal(allocSize / blockSize);
 		int[] blockKey = PRNG.ints(4).toArray();
 
-		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorAlgorithm.NONE);
+		aSpaceMapBlockPointer.setCompressionAlgorithm(CompressorAlgorithm.NONE.ordinal());
 		aSpaceMapBlockPointer.setBlockType(BlockType.SPACEMAP);
 		aSpaceMapBlockPointer.setAllocatedSize(allocSize);
 		aSpaceMapBlockPointer.setBlockIndex0(blockIndex);

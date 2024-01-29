@@ -17,6 +17,7 @@ import org.terifan.raccoon.blockdevice.managed.SyncMode;
 public class FileBlockStorage implements BlockStorage
 {
 	private final Logger log = Logger.getLogger();
+	private final static int DEFAULT_BLOCK_SIZE = 4096;
 
 	protected Path mPath;
 	protected FileChannel mFileChannel;
@@ -28,7 +29,7 @@ public class FileBlockStorage implements BlockStorage
 
 	public FileBlockStorage(Path aPath)
 	{
-		this(aPath, 4096, false);
+		this(aPath, DEFAULT_BLOCK_SIZE, false);
 	}
 
 
@@ -79,6 +80,7 @@ public class FileBlockStorage implements BlockStorage
 	}
 
 
+	@Override
 	public boolean isReadOnly()
 	{
 		return mReadOnly;
@@ -125,9 +127,9 @@ public class FileBlockStorage implements BlockStorage
 			ByteBuffer buf = ByteBuffer.wrap(aBuffer, aBufferOffset, aBufferLength);
 			mFileChannel.read(buf, aBlockIndex * mBlockSize);
 		}
-		catch (IOException e)
+		catch (IOException | IndexOutOfBoundsException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonDeviceException("available=" + aBuffer.length + ", offset=" + aBufferOffset + ", length=" + aBufferLength, e);
 		}
 	}
 

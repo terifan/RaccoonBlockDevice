@@ -37,7 +37,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> Document.of("leaf:1024,node:1024,compress=lzjb"));
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null))
 				{
 					byte[] data = new byte[8192];
 					new Random().nextBytes(data);
@@ -56,7 +56,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
 				{
 					byte[] data1 = new byte[8192];
 					byte[] data2 = new byte[8192];
@@ -74,7 +74,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
 				{
 					byte[] data = new byte[8192];
 					lob.position(0);
@@ -92,7 +92,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
 				{
 					byte[] data1 = new byte[8192];
 					byte[] data2 = new byte[8192];
@@ -117,7 +117,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
 				{
 					for (int i = 0; i < 1000; i++)
 					{
@@ -142,7 +142,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
 				{
 					byte[] tmp = lob.readAllBytes();
 					if (!Arrays.equals(tmp, Arrays.copyOfRange(buffer,0,tmp.length)))throw new IllegalStateException();
@@ -176,7 +176,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null))
 				{
 					lob.writeAllBytes(a);
 					lob.flush();
@@ -195,7 +195,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().get("lob");
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
 				{
 					lob.position(0);
 //					lob.scan();
@@ -217,7 +217,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().get("lob");
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
 				{
 					lob.position(0);
 					lob.scan();
@@ -234,7 +234,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().get("lob");
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
 				{
 					lob.position(20000);
 					lob.writeAllBytes(new byte[4000]);
@@ -248,7 +248,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = dev.getMetadata().get("lob");
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
 				{
 					lob.scan();
 					byte[] data = lob.readAllBytes();
@@ -279,7 +279,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null))
 				{
 					lob.position(2 * 1024 + 100);
 					lob.writeAllBytes(output);
@@ -342,7 +342,7 @@ public class Test
 			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockDevice))
 			{
 				Document header = new Document();
-				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE))
+				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null))
 				{
 					for (int i = 0; i < 1; i++)
 					{
@@ -428,7 +428,7 @@ public class Test
 				Document header = new Document();
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.CREATE, null))
 					{
 						lob.writeAllBytes(lobData);
 					}
@@ -463,7 +463,7 @@ public class Test
 				Document header = dev.getMetadata().getDocument("lob");
 				try (BlockAccessor blockAccessor = new BlockAccessor(dev))
 				{
-					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ))
+					try (LobByteChannel lob = new LobByteChannel(blockAccessor, header, LobOpenOption.READ, null))
 					{
 						byte[] data = lob.readAllBytes();
 						System.out.println(Arrays.equals(data, lobData));

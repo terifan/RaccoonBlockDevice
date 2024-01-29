@@ -1,7 +1,7 @@
 package org.terifan.raccoon.blockdevice;
 
 
-enum PageState
+enum LobPageState
 {
 	PENDING,
 	PERSISTED
