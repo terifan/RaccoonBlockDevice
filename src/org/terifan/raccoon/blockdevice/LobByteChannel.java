@@ -68,7 +68,7 @@ public class LobByteChannel implements SeekableByteChannel
 		mBlockAccessor = aBlockAccessor;
 		mNodeSize = mHeader.computeIfAbsent(IX_NODE_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 8192));
 		mLeafSize = mHeader.computeIfAbsent(IX_LEAF_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 128 * 1024));
-		mCompressor = mHeader.computeIfAbsent(IX_COMPRESSION, k -> CompressorAlgorithm.ZLE.ordinal());
+		mCompressor = mHeader.computeIfAbsent(IX_COMPRESSION, k -> CompressorAlgorithm.LZJB.ordinal());
 		mLength = mHeader.computeIfAbsent(IX_LENGTH, k -> 0L);
 
 		int blockSize = mBlockAccessor.getBlockDevice().getBlockSize();

@@ -9,6 +9,8 @@ import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt64;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt64;
+import org.terifan.raccoon.document.Array;
+import org.terifan.raccoon.document.Document;
 
 
 @LogStatementProducer
@@ -283,6 +285,46 @@ public final class BlockPointer
 	public BlockPointer unmarshalBuffer(ByteArrayBuffer aDocument)
 	{
 		aDocument.read(mBuffer);
+		return this;
+	}
+
+
+	public Document marshalDocument()
+	{
+		Array pointers = Array.of(getBlockIndex0(), getBlockIndex1(), getBlockIndex2());
+		if (pointers.getLast().equals(0L)) pointers.removeLast();
+		if (pointers.getLast().equals(0L)) pointers.removeLast();
+
+		return new Document()
+			.put("0", getBlockType())
+			.put("1", getBlockLevel())
+			.put("2", getChecksumAlgorithm())
+			.put("3", getCompressionAlgorithm())
+			.put("4", getAllocatedSize())
+			.put("5", getLogicalSize())
+			.put("6", getPhysicalSize())
+			.put("7", pointers)
+			.put("8", getGeneration())
+			.put("9", Array.of(getBlockKey()))
+			.put("10", Array.of(getChecksum()));
+	}
+
+
+	public BlockPointer unmarshalDocument(Document aDocument)
+	{
+		setBlockType(aDocument.getInt("0"));
+		setBlockLevel(aDocument.getInt("1"));
+		setChecksumAlgorithm(aDocument.getInt("2"));
+		setCompressionAlgorithm(aDocument.getInt("3"));
+		setAllocatedSize(aDocument.getInt("4"));
+		setLogicalSize(aDocument.getInt("5"));
+		setPhysicalSize(aDocument.getInt("6"));
+		setBlockIndex0(aDocument.getArray("7").get(0, 0L));
+		setBlockIndex1(aDocument.getArray("7").get(1, 0L));
+		setBlockIndex2(aDocument.getArray("7").get(2, 0L));
+		setGeneration(aDocument.getInt("8"));
+		setBlockKey(aDocument.getArray("9").asInts());
+		setChecksum(aDocument.getArray("10").asInts());
 		return this;
 	}
 }
