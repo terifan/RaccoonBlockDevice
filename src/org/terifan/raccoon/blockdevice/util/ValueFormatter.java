@@ -49,6 +49,10 @@ public class ValueFormatter
 
 	public static String formatDuration(long aMillis)
 	{
+		if (aMillis < 0)
+		{
+			aMillis = System.currentTimeMillis() + aMillis;
+		}
 		if (aMillis < 1000)
 		{
 			return String.format("0.%03d", aMillis);

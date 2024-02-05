@@ -139,6 +139,12 @@ public class BlockAccessor implements AutoCloseable
 	}
 
 
+	public BlockPointer writeBlock(byte[] aBuffer, int aBlockType, int aBlockLevel, int aCompressorLevel)
+	{
+		return writeBlock(aBuffer, 0, aBuffer.length, aBlockType, aBlockLevel, aCompressorLevel);
+	}
+
+
 	public synchronized BlockPointer writeBlock(byte[] aBuffer, int aOffset, int aLength, int aBlockType, int aBlockLevel, int aCompressorLevel)
 	{
 		if (isAllZeros(aBuffer, aOffset, aLength))

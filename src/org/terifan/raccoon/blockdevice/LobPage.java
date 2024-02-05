@@ -195,11 +195,11 @@ class LobPage
 
 		if (mLevel == 0)
 		{
-			mBlockPointer = blockAccessor.writeBlock(mBuffer, 0, mBuffer.length, BlockType.LOB_LEAF, mLevel, mChannel.mCompressor);
+			mBlockPointer = blockAccessor.writeBlock(mBuffer, BlockType.LOB_LEAF, mLevel, mChannel.mCompressor);
 		}
 		else
 		{
-			mBlockPointer = blockAccessor.writeBlock(mBuffer, 0, mBuffer.length, BlockType.LOB_NODE, mLevel, CompressorAlgorithm.ZLE.ordinal());
+			mBlockPointer = blockAccessor.writeBlock(mBuffer, BlockType.LOB_NODE, mLevel, CompressorAlgorithm.ZLE.ordinal());
 		}
 
 		mState = LobPageState.PERSISTED;
