@@ -18,7 +18,7 @@ public final class BlockPointer
 {
 	private final Logger log = Logger.getLogger();
 
-	public final static int SIZE = 80;
+	public final static int SIZE = 88;
 
 	private final static int OFS_FLAG_TYPE = 0;			// 1
 	private final static int OFS_FLAG_LEVEL = 1;		// 1
@@ -27,12 +27,13 @@ public final class BlockPointer
 	private final static int OFS_ALLOCATED_SIZE = 4;	// 4
 	private final static int OFS_LOGICAL_SIZE = 8;		// 4
 	private final static int OFS_PHYSICAL_SIZE = 12;	// 4
-	private final static int OFS_BLOCK_INDEX_0 = 16;	// 8
-	private final static int OFS_BLOCK_INDEX_1 = 24;	// 8
-	private final static int OFS_BLOCK_INDEX_2 = 32;	// 8
-	private final static int OFS_GENERATION = 40;		// 8
-	private final static int OFS_BLOCK_KEY = 48;		// 16
-	private final static int OFS_CHECKSUM = 64;			// 16
+	private final static int OFS_CUMULATIVE_SIZE = 16;	// 8
+	private final static int OFS_BLOCK_INDEX_0 = 24;	// 8
+	private final static int OFS_BLOCK_INDEX_1 = 32;	// 8
+	private final static int OFS_BLOCK_INDEX_2 = 40;	// 8
+	private final static int OFS_GENERATION = 48;		// 8
+	private final static int OFS_BLOCK_KEY = 56;		// 16
+	private final static int OFS_CHECKSUM = 72;			// 16
 
 	private final byte[] mBuffer;
 
@@ -133,6 +134,19 @@ public final class BlockPointer
 	public BlockPointer setPhysicalSize(int aPhysicalSize)
 	{
 		putInt32(mBuffer, OFS_PHYSICAL_SIZE, aPhysicalSize);
+		return this;
+	}
+
+
+	public long getCumulativeSize()
+	{
+		return getInt64(mBuffer, OFS_CUMULATIVE_SIZE);
+	}
+
+
+	public BlockPointer setCumulativeSize(long aCumulativeSize)
+	{
+		putInt64(mBuffer, OFS_CUMULATIVE_SIZE, aCumulativeSize);
 		return this;
 	}
 
@@ -265,7 +279,7 @@ public final class BlockPointer
 	@LogStatementProducer
 	private LogStatement generateLog()
 	{
-		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
+		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, cum={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getCumulativeSize(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
 	}
 
 
@@ -277,7 +291,7 @@ public final class BlockPointer
 
 	public BlockPointer unmarshal(byte[] aDocument)
 	{
-		System.arraycopy(aDocument, 0, mBuffer, 0, mBuffer.length);
+		System.arraycopy(aDocument, 0, mBuffer, 0, SIZE);
 		return this;
 	}
 
@@ -303,10 +317,11 @@ public final class BlockPointer
 			.put("4", getAllocatedSize())
 			.put("5", getLogicalSize())
 			.put("6", getPhysicalSize())
-			.put("7", pointers)
-			.put("8", getGeneration())
-			.put("9", Array.of(getBlockKey()))
-			.put("10", Array.of(getChecksum()));
+			.put("7", getCumulativeSize())
+			.put("8", pointers)
+			.put("9", getGeneration())
+			.put("10", Array.of(getBlockKey()))
+			.put("11", Array.of(getChecksum()));
 	}
 
 
@@ -319,12 +334,13 @@ public final class BlockPointer
 		setAllocatedSize(aDocument.getInt("4"));
 		setLogicalSize(aDocument.getInt("5"));
 		setPhysicalSize(aDocument.getInt("6"));
-		setBlockIndex0(aDocument.getArray("7").get(0, 0L));
-		setBlockIndex1(aDocument.getArray("7").get(1, 0L));
-		setBlockIndex2(aDocument.getArray("7").get(2, 0L));
-		setGeneration(aDocument.getInt("8"));
-		setBlockKey(aDocument.getArray("9").asInts());
-		setChecksum(aDocument.getArray("10").asInts());
+		setCumulativeSize(aDocument.getLong("7"));
+		setBlockIndex0(aDocument.getArray("8").get(0, 0L));
+		setBlockIndex1(aDocument.getArray("8").get(1, 0L));
+		setBlockIndex2(aDocument.getArray("8").get(2, 0L));
+		setGeneration(aDocument.getInt("9"));
+		setBlockKey(aDocument.getArray("10").asInts());
+		setChecksum(aDocument.getArray("11").asInts());
 		return this;
 	}
 }

@@ -26,12 +26,11 @@ public class LobByteChannel implements SeekableByteChannel
 
 	private final static String IX_VERSION = "0";
 	private final static String IX_LENGTH = "1";
-	private final static String IX_NODE_SIZE = "2";
+	private final static String IX_NODES_PER_PAGE = "2";
 	private final static String IX_LEAF_SIZE = "3";
-	private final static String IX_NODES_PER_PAGE = "4";
-	private final static String IX_COMPRESSION = "5";
-	private final static String IX_POINTER = "6";
-	private final static String IX_METADATA = "7";
+	private final static String IX_COMPRESSION = "4";
+	private final static String IX_POINTER = "5";
+	private final static String IX_METADATA = "6";
 
 	private BlockAccessor mBlockAccessor;
 	private Consumer<LobByteChannel> mCloseAction;
@@ -51,11 +50,9 @@ public class LobByteChannel implements SeekableByteChannel
 	 * Create or open a LobByteChannel
 	 *
 	 * @param aOptions a Document with options for creating the LobByteChannel
-	 * <li><b>leaf</b> - Size of a leaf node. Integer. Default block size, multiple of block size.
-	 * <li><b>node</b> - Size of an interior node. Integer. Default block size, multiple of block size.
-	 * <li><b>compression</b> - Name of a compressor. String. See {@link org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm}. Default lzjb.
-	 * <li><b>degree</b> - Number of pointers in an interior node, overrides node size. Integer. Default unspecified.
-	 * <li><b>record</b> - Size of a record. Integer. Default 128. Min 128, max 65000
+	 * <li><b>node</b> - Number of pointers in an interior node. Integer. Default 128.
+	 * <li><b>leaf</b> - Size of a leaf node. Integer. Default 131072.
+	 * <li><b>compression</b> - Name of a compressor used to compress the leaf nodes. String. See {@link org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm}. Default lzjb.
 	 */
 	public LobByteChannel(BlockAccessor aBlockAccessor, Document aHeader, LobOpenOption aOpenOption, Document aOptions) throws IOException
 	{
@@ -66,20 +63,15 @@ public class LobByteChannel implements SeekableByteChannel
 
 		mHeader = aHeader;
 		mBlockAccessor = aBlockAccessor;
-		mNodeSize = mHeader.computeIfAbsent(IX_NODE_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 8192));
+		mNodesPerPage = mHeader.computeIfAbsent(IX_NODES_PER_PAGE, k -> 128);
 		mLeafSize = mHeader.computeIfAbsent(IX_LEAF_SIZE, k -> Math.max(aBlockAccessor.getBlockDevice().getBlockSize(), 128 * 1024));
 		mCompressor = mHeader.computeIfAbsent(IX_COMPRESSION, k -> CompressorAlgorithm.LZJB.ordinal());
 		mLength = mHeader.computeIfAbsent(IX_LENGTH, k -> 0L);
 
-		int blockSize = mBlockAccessor.getBlockDevice().getBlockSize();
-		if (mNodeSize < blockSize || mLeafSize < blockSize)
-		{
-			throw new IllegalArgumentException();
-		}
+		mNodeSize = mHeader.getInt(IX_NODES_PER_PAGE) * BlockPointer.SIZE;
 
-		aHeader.putIfAbsent(IX_NODES_PER_PAGE, k -> mNodeSize / BlockPointer.SIZE);
-
-		mNodesPerPage = aHeader.get(IX_NODES_PER_PAGE);
+		assert mNodeSize >= mBlockAccessor.getBlockDevice().getBlockSize();
+		assert mLeafSize >= mBlockAccessor.getBlockDevice().getBlockSize();
 
 		if (aOpenOption == LobOpenOption.REPLACE)
 		{
@@ -253,7 +245,7 @@ public class LobByteChannel implements SeekableByteChannel
 			.put(IX_POINTER, mRoot.mBlockPointer.marshal())
 			.put(IX_VERSION, 0)
 			.put(IX_LENGTH, mLength)
-			.put(IX_NODE_SIZE, mNodeSize)
+			.put(IX_NODES_PER_PAGE, mNodesPerPage)
 			.put(IX_LEAF_SIZE, mLeafSize)
 			.put(IX_COMPRESSION, mCompressor);
 

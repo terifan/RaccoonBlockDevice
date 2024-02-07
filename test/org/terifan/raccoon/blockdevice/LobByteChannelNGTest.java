@@ -1,14 +1,12 @@
 package org.terifan.raccoon.blockdevice;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import org.terifan.logging.Level;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 import org.terifan.raccoon.document.Document;
 import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
