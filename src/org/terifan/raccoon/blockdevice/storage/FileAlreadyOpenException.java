@@ -1,9 +1,9 @@
 package org.terifan.raccoon.blockdevice.storage;
 
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 
 
-public class FileAlreadyOpenException extends RaccoonDeviceException
+public class FileAlreadyOpenException extends RaccoonIOException
 {
 	private static final long serialVersionUID = 1L;
 

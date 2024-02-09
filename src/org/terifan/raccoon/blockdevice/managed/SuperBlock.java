@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import org.terifan.raccoon.document.Document;
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.document.StreamMarshaller;
 import org.terifan.raccoon.security.messagedigest.SHA3;
@@ -75,7 +75,7 @@ class SuperBlock
 
 		if (!Arrays.equals(found, expected))
 		{
-			throw new RaccoonDeviceException("Checksum error in SuperBlock #" + aIndex);
+			throw new RaccoonIOException("Checksum error in SuperBlock #" + aIndex);
 		}
 
 		try (StreamMarshaller marshaller = new StreamMarshaller(new ByteArrayInputStream(buffer)))
@@ -111,7 +111,7 @@ class SuperBlock
 
 		if (buffer.length > aBlockDevice.getBlockSize() - DIGEST_LENGTH)
 		{
-			throw new RaccoonDeviceException("Fatal error: SuperBlock serialized too larger than " + (aBlockDevice.getBlockSize() - DIGEST_LENGTH) + " bytes: " + baos.size());
+			throw new RaccoonIOException("Fatal error: SuperBlock serialized too larger than " + (aBlockDevice.getBlockSize() - DIGEST_LENGTH) + " bytes: " + baos.size());
 		}
 
 		buffer = Arrays.copyOfRange(buffer, 0, aBlockDevice.getBlockSize());

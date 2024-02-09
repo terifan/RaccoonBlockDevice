@@ -10,7 +10,7 @@ public final class AccessCredentials
 	public final static CipherModeFunction DEFAULT_CIPHER_MODE = CipherModeFunction.XTS;
 	public final static KeyGenerationFunction DEFAULT_KEY_GENERATOR = KeyGenerationFunction.SHA512;
 
-	public final static int DEFAULT_ITERATION_COUNT = 1000;
+	public final static int DEFAULT_ITERATION_COUNT = 1024;
 
 	private EncryptionFunction mEncryptionFunction;
 	private KeyGenerationFunction mKeyGeneratorFunction;

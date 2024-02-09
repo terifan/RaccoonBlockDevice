@@ -8,7 +8,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import org.terifan.logging.Level;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 
 
 public class MemoryBlockStorage implements BlockStorage
@@ -75,7 +75,7 @@ public class MemoryBlockStorage implements BlockStorage
 			}
 			else
 			{
-				throw new RaccoonDeviceException("Reading a free block: " + aBlockIndex);
+				throw new RaccoonIOException("Reading a free block: " + aBlockIndex);
 			}
 
 			aBlockIndex++;

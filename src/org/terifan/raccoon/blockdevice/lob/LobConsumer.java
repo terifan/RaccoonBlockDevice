@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.lob;
 
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.document.ObjectId;

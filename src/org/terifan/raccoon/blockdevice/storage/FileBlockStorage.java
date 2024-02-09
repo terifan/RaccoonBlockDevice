@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.managed.SyncMode;
 
 
@@ -75,7 +75,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 
@@ -97,7 +97,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 
@@ -112,7 +112,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 
@@ -129,7 +129,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException | IndexOutOfBoundsException e)
 		{
-			throw new RaccoonDeviceException("available=" + aBuffer.length + ", offset=" + aBufferOffset + ", length=" + aBufferLength, e);
+			throw new RaccoonIOException("available=" + aBuffer.length + ", offset=" + aBufferOffset + ", length=" + aBufferLength, e);
 		}
 	}
 
@@ -146,7 +146,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 
@@ -166,7 +166,7 @@ public class FileBlockStorage implements BlockStorage
 				}
 				catch (IOException e)
 				{
-					throw new RaccoonDeviceException(e);
+					throw new RaccoonIOException(e);
 				}
 			}
 
@@ -192,7 +192,7 @@ public class FileBlockStorage implements BlockStorage
 				}
 				catch (IOException e)
 				{
-					throw new RaccoonDeviceException(e);
+					throw new RaccoonIOException(e);
 				}
 				mFileChannel = null;
 			}
@@ -220,7 +220,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 
@@ -238,7 +238,7 @@ public class FileBlockStorage implements BlockStorage
 			}
 			catch (IOException e)
 			{
-				throw new RaccoonDeviceException(e);
+				throw new RaccoonIOException(e);
 			}
 		}
 	}
@@ -260,7 +260,7 @@ public class FileBlockStorage implements BlockStorage
 		}
 		catch (IOException e)
 		{
-			throw new RaccoonDeviceException(e);
+			throw new RaccoonIOException(e);
 		}
 	}
 

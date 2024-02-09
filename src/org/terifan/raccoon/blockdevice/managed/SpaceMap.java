@@ -2,7 +2,7 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
@@ -92,7 +92,7 @@ class SpaceMap
 	{
 		if (!mRangeMap.isFree((int)aBlockIndex, aBlockCount))
 		{
-			throw new RaccoonDeviceException("Range not allocated: " + aBlockIndex + " +" + aBlockCount);
+			throw new RaccoonIOException("Range not allocated: " + aBlockIndex + " +" + aBlockCount);
 		}
 	}
 
@@ -169,7 +169,7 @@ class SpaceMap
 		{
 			if (blockPointer.getBlockIndex0() < 0)
 			{
-				throw new RaccoonDeviceException("Block at illegal offset: " + blockPointer.getBlockIndex0());
+				throw new RaccoonIOException("Block at illegal offset: " + blockPointer.getBlockIndex0());
 			}
 
 			int blockSize = aBlockDevice.getBlockSize();
@@ -182,7 +182,7 @@ class SpaceMap
 
 			if (!Arrays.equals(blockPointer.getChecksum(), checksum))
 			{
-				throw new RaccoonDeviceException("Checksum error at block index ");
+				throw new RaccoonIOException("Checksum error at block index ");
 			}
 
 			buffer.limit(blockPointer.getLogicalSize());

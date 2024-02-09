@@ -1,5 +1,7 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.lob;
 
+import org.terifan.raccoon.blockdevice.lob.LobOpenOption;
+import org.terifan.raccoon.blockdevice.lob.LobByteChannel;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
@@ -7,6 +9,7 @@ import org.terifan.raccoon.blockdevice.managed.ManagedBlockDevice;
 import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import org.terifan.logging.Level;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.BlockAccessor;
 import org.terifan.raccoon.document.Document;
 import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;

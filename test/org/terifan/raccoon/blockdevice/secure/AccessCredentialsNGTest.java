@@ -15,6 +15,6 @@ public class AccessCredentialsNGTest
 		byte[] salt = "salt".getBytes();
 		byte[] keypool = ac.generateKeyPool(KeyGenerationFunction.SKEIN512, salt, 16);
 
-		assertEquals(HexFormat.of().formatHex(keypool), "0B875E667E38918FF04F8F1737790836");
+		assertEquals(HexFormat.of().formatHex(keypool).toUpperCase(), "0B875E667E38918FF04F8F1737790836");
 	}
 }

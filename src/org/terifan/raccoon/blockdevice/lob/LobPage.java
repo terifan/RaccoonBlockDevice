@@ -1,9 +1,12 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.lob;
 
 import java.util.Arrays;
 import org.terifan.logging.LogStatement;
 import org.terifan.logging.LogStatementProducer;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.BlockAccessor;
+import org.terifan.raccoon.blockdevice.BlockPointer;
+import org.terifan.raccoon.blockdevice.BlockType;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 

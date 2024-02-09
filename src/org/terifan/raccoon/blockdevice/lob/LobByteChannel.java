@@ -1,4 +1,4 @@
-package org.terifan.raccoon.blockdevice;
+package org.terifan.raccoon.blockdevice.lob;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,6 +9,8 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.function.Consumer;
 import org.terifan.logging.Logger;
 import org.terifan.logging.Unit;
+import org.terifan.raccoon.blockdevice.BlockAccessor;
+import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 

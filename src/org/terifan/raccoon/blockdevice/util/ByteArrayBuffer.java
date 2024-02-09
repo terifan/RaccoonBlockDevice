@@ -3,7 +3,7 @@ package org.terifan.raccoon.blockdevice.util;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-import org.terifan.raccoon.blockdevice.EOFException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 
 
 public final class ByteArrayBuffer
@@ -148,7 +148,7 @@ public final class ByteArrayBuffer
 					return this;
 				}
 
-				throw new EOFException("Buffer capacity cannot be increased, capacity " + mBuffer.length + ", offset " + mOffset + ", increment " + aIncrement);
+				throw new RaccoonIOException("Buffer capacity cannot be increased, capacity " + mBuffer.length + ", offset " + mOffset + ", increment " + aIncrement);
 			}
 
 			mBuffer = Arrays.copyOfRange(mBuffer, 0, Math.min(mLimit == NO_LIMIT ? Integer.MAX_VALUE : mLimit, (mOffset + aIncrement) * 3 / 2));
@@ -234,7 +234,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new EOFException("Variable int exceeds maximum length");
+		throw new RaccoonIOException("Variable int exceeds maximum length");
 	}
 
 
@@ -281,7 +281,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new EOFException("Variable int exceeds maximum length");
+		throw new RaccoonIOException("Variable int exceeds maximum length");
 	}
 
 
@@ -328,7 +328,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new EOFException("Variable long exceeds maximum length");
+		throw new RaccoonIOException("Variable long exceeds maximum length");
 	}
 
 
@@ -375,7 +375,7 @@ public final class ByteArrayBuffer
 			}
 		}
 
-		throw new EOFException("Variable long exceeds maximum length");
+		throw new RaccoonIOException("Variable long exceeds maximum length");
 	}
 
 
@@ -772,7 +772,7 @@ public final class ByteArrayBuffer
 			int c = readInt8();
 			if (c == -1)
 			{
-				throw new EOFException("Premature end of stream");
+				throw new RaccoonIOException("Premature end of stream");
 			}
 			aDestination.writeInt8(c);
 		}

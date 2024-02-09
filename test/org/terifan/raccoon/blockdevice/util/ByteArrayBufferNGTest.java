@@ -1,9 +1,8 @@
 package org.terifan.raccoon.blockdevice.util;
 
-import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import java.io.IOException;
 import java.util.Random;
-import org.terifan.raccoon.blockdevice.EOFException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 
@@ -78,7 +77,7 @@ public class ByteArrayBufferNGTest
 	}
 
 
-	@Test(expectedExceptions = EOFException.class)
+	@Test(expectedExceptions = RaccoonIOException.class)
 	public void testWriteOverflow1() throws IOException
 	{
 		ByteArrayBuffer out = ByteArrayBuffer.wrap(new byte[5]);
@@ -86,7 +85,7 @@ public class ByteArrayBufferNGTest
 	}
 
 
-	@Test(expectedExceptions = EOFException.class)
+	@Test(expectedExceptions = RaccoonIOException.class)
 	public void testWriteOverflow2() throws IOException
 	{
 		ByteArrayBuffer out = ByteArrayBuffer.wrap(new byte[5]);

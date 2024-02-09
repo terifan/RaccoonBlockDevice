@@ -1,9 +1,9 @@
 package org.terifan.raccoon.blockdevice.managed;
 
-import org.terifan.raccoon.blockdevice.RaccoonDeviceException;
+import org.terifan.raccoon.blockdevice.RaccoonIOException;
 
 
-public class UnsupportedVersionException extends RaccoonDeviceException
+public class UnsupportedVersionException extends RaccoonIOException
 {
 	private static final long serialVersionUID = 1L;
 
