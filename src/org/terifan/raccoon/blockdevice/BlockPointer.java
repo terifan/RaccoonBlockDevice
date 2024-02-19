@@ -18,22 +18,23 @@ public final class BlockPointer
 {
 	private final Logger log = Logger.getLogger();
 
-	public final static int SIZE = 88;
+	public final static int SIZE = 96;
 
-	private final static int OFS_FLAG_TYPE = 0;			// 1
-	private final static int OFS_FLAG_LEVEL = 1;		// 1
-	private final static int OFS_FLAG_CHECKSUM = 2;		// 1
-	private final static int OFS_FLAG_COMPRESSION = 3;	// 1
-	private final static int OFS_ALLOCATED_SIZE = 4;	// 4
-	private final static int OFS_LOGICAL_SIZE = 8;		// 4
-	private final static int OFS_PHYSICAL_SIZE = 12;	// 4
-	private final static int OFS_CUMULATIVE_SIZE = 16;	// 8
-	private final static int OFS_BLOCK_INDEX_0 = 24;	// 8
-	private final static int OFS_BLOCK_INDEX_1 = 32;	// 8
-	private final static int OFS_BLOCK_INDEX_2 = 40;	// 8
-	private final static int OFS_GENERATION = 48;		// 8
-	private final static int OFS_BLOCK_KEY = 56;		// 16
-	private final static int OFS_CHECKSUM = 72;			// 16
+	private final static int OFS_FLAG_TYPE = 0;				// 1
+	private final static int OFS_FLAG_LEVEL = 1;			// 1
+	private final static int OFS_FLAG_CHECKSUM = 2;			// 1
+	private final static int OFS_FLAG_COMPRESSION = 3;		// 1
+	private final static int OFS_ALLOCATED_SIZE = 4;		// 4
+	private final static int OFS_LOGICAL_SIZE = 8;			// 4
+	private final static int OFS_PHYSICAL_SIZE = 12;		// 4
+	private final static int OFS_CUMULATIVE_SIZE = 16;		// 8 - total allocated size of this block and all child blocks
+	private final static int OFS_CUMULATIVE_COUNT = 24;		// 8 - total number of documents/entries in this block and all child blocks
+	private final static int OFS_BLOCK_INDEX_0 = 32;		// 8
+	private final static int OFS_BLOCK_INDEX_1 = 40;		// 8
+	private final static int OFS_BLOCK_INDEX_2 = 48;		// 8
+	private final static int OFS_GENERATION = 56;			// 8
+	private final static int OFS_BLOCK_KEY = 64;			// 16
+	private final static int OFS_CHECKSUM = 80;				// 16
 
 	private final byte[] mBuffer;
 
@@ -147,6 +148,19 @@ public final class BlockPointer
 	public BlockPointer setCumulativeSize(long aCumulativeSize)
 	{
 		putInt64(mBuffer, OFS_CUMULATIVE_SIZE, aCumulativeSize);
+		return this;
+	}
+
+
+	public long getCumulativeCount()
+	{
+		return getInt64(mBuffer, OFS_CUMULATIVE_COUNT);
+	}
+
+
+	public BlockPointer setCumulativeCount(long aCumulativeCount)
+	{
+		putInt64(mBuffer, OFS_CUMULATIVE_COUNT, aCumulativeCount);
 		return this;
 	}
 
@@ -279,7 +293,7 @@ public final class BlockPointer
 	@LogStatementProducer
 	private LogStatement generateLog()
 	{
-		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, cum={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getCumulativeSize(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
+		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, cum={}, cust={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getCumulativeSize(), getCumulativeCount(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
 	}
 
 
@@ -318,10 +332,11 @@ public final class BlockPointer
 			.put("5", getLogicalSize())
 			.put("6", getPhysicalSize())
 			.put("7", getCumulativeSize())
-			.put("8", pointers)
-			.put("9", getGeneration())
-			.put("10", Array.of(getBlockKey()))
-			.put("11", Array.of(getChecksum()));
+			.put("7", getCumulativeCount())
+			.put("9", pointers)
+			.put("10", getGeneration())
+			.put("11", Array.of(getBlockKey()))
+			.put("12", Array.of(getChecksum()));
 	}
 
 
@@ -335,12 +350,13 @@ public final class BlockPointer
 		setLogicalSize(aDocument.getInt("5"));
 		setPhysicalSize(aDocument.getInt("6"));
 		setCumulativeSize(aDocument.getLong("7"));
-		setBlockIndex0(aDocument.getArray("8").get(0, 0L));
-		setBlockIndex1(aDocument.getArray("8").get(1, 0L));
-		setBlockIndex2(aDocument.getArray("8").get(2, 0L));
-		setGeneration(aDocument.getInt("9"));
-		setBlockKey(aDocument.getArray("10").asInts());
-		setChecksum(aDocument.getArray("11").asInts());
+		setCumulativeCount(aDocument.getLong("8"));
+		setBlockIndex0(aDocument.getArray("9").get(0, 0L));
+		setBlockIndex1(aDocument.getArray("9").get(1, 0L));
+		setBlockIndex2(aDocument.getArray("9").get(2, 0L));
+		setGeneration(aDocument.getInt("10"));
+		setBlockKey(aDocument.getArray("11").asInts());
+		setChecksum(aDocument.getArray("12").asInts());
 		return this;
 	}
 }

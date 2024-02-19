@@ -31,6 +31,13 @@ public class MemoryBlockStorage implements BlockStorage
 	}
 
 
+	public MemoryBlockStorage(int aBlockSize, Map<Long, byte[]> aStorage)
+	{
+		mBlockSize = aBlockSize;
+		mStorage.putAll(aStorage);
+	}
+
+
 	@Override
 	public boolean isReadOnly()
 	{

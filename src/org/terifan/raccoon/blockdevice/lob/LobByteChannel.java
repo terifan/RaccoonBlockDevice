@@ -286,6 +286,7 @@ public class LobByteChannel implements SeekableByteChannel
 
 	public synchronized void delete()
 	{
+		throw new UnsupportedOperationException();
 	}
 
 
