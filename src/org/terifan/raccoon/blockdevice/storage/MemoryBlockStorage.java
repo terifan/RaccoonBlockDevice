@@ -15,8 +15,8 @@ public class MemoryBlockStorage implements BlockStorage
 {
 	private final Logger log = Logger.getLogger();
 
-	private final SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
-	private final int mBlockSize;
+	private SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
+	private int mBlockSize;
 
 
 	public MemoryBlockStorage()
@@ -35,6 +35,16 @@ public class MemoryBlockStorage implements BlockStorage
 	{
 		mBlockSize = aBlockSize;
 		mStorage.putAll(aStorage);
+	}
+
+
+	public void setBlockSize(int aBlockSize)
+	{
+		if (mBlockSize != aBlockSize)
+		{
+			mStorage.clear();
+		}
+		mBlockSize = aBlockSize;
 	}
 
 

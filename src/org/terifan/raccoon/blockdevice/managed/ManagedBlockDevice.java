@@ -21,7 +21,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	private int mReservedBlocks;
 
 
-	public ManagedBlockDevice(BlockStorage aBlockStorage) throws IOException
+	public ManagedBlockDevice(BlockStorage aBlockStorage)
 	{
 		if (aBlockStorage == null)
 		{
@@ -44,7 +44,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void init() throws IOException
+	private void init()
 	{
 		if (mWasCreated)
 		{
@@ -57,7 +57,7 @@ public class ManagedBlockDevice implements AutoCloseable
 	}
 
 
-	private void createBlockDevice() throws IOException
+	private void createBlockDevice()
 	{
 		log.i("create block device");
 		log.inc();
@@ -72,20 +72,34 @@ public class ManagedBlockDevice implements AutoCloseable
 			throw new IllegalStateException("The super block must be located at block index 0, was: " + index);
 		}
 
-		// write two copies of super block
-		writeSuperBlock();
-		writeSuperBlock();
+		try
+		{
+			// write two copies of super block
+			writeSuperBlock();
+			writeSuperBlock();
+		}
+		catch (IOException e)
+		{
+			throw new RaccoonIOException("Failed to create block device", e);
+		}
 
 		log.dec();
 	}
 
 
-	private void loadBlockDevice() throws IOException
+	private void loadBlockDevice()
 	{
 		log.i("load block device");
 		log.inc();
 
-		readSuperBlock();
+		try
+		{
+			readSuperBlock();
+		}
+		catch (IOException e)
+		{
+			throw new RaccoonIOException("Failed to read from block device", e);
+		}
 
 		mSpaceMap = new SpaceMap(mSuperBlock, this, mBlockStorage);
 

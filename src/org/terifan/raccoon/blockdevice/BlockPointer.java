@@ -293,7 +293,7 @@ public final class BlockPointer
 	@LogStatementProducer
 	private LogStatement generateLog()
 	{
-		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, cum={}, cust={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getCumulativeSize(), getCumulativeCount(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
+		return new LogStatement("type={}, level={}, index={}, alloc={}, phys={}, logic={}, cumSz={}, cumCnt={}, gen={}, cmp={}, chk={}", BlockType.lookup(getBlockType()), getBlockLevel(), getBlockIndex0(), getAllocatedSize(), getPhysicalSize(), getLogicalSize(), getCumulativeSize(), getCumulativeCount(), getGeneration(), getCompressionAlgorithm(), 0xffffffffL & getChecksum()[0]).setType("BlockPointer");
 	}
 
 
