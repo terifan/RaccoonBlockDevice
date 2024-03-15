@@ -10,7 +10,7 @@ public class AccessCredentialsNGTest
 	@Test
 	public void testSomeMethod()
 	{
-		AccessCredentials ac = new AccessCredentials("password".toCharArray(), EncryptionFunction.AES, KeyGenerationFunction.SHA512, CipherModeFunction.XTS);
+		AccessCredentials ac = new AccessCredentials("password".toCharArray(), EncryptionFunction.AES, KeyGenerationFunction.SHA512, CipherModeFunction.XTS, 1024);
 
 		byte[] salt = "salt".getBytes();
 		byte[] keypool = ac.generateKeyPool(KeyGenerationFunction.SKEIN512, salt, 16);

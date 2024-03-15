@@ -46,6 +46,12 @@ public final class BlockPointer
 	}
 
 
+	private BlockPointer(byte[] aBuffer)
+	{
+		mBuffer = aBuffer;
+	}
+
+
 	public int getBlockType()
 	{
 		return mBuffer[OFS_FLAG_TYPE];
@@ -297,16 +303,15 @@ public final class BlockPointer
 	}
 
 
-	public byte[] marshal()
+	public byte[] toByteArray()
 	{
 		return mBuffer;
 	}
 
 
-	public BlockPointer unmarshal(byte[] aDocument)
+	public static BlockPointer fromByteArray(byte[] aBuffer)
 	{
-		System.arraycopy(aDocument, 0, mBuffer, 0, SIZE);
-		return this;
+		return new BlockPointer(aBuffer);
 	}
 
 

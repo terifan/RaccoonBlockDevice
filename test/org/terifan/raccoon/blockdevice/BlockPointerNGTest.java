@@ -24,7 +24,7 @@ public class BlockPointerNGTest
 			.setChecksum(new int[]{0xcccccccc,0xdddddddd,0xeeeeeeee,0xffffffff})
 			;
 
-		System.out.println(bp.marshal().length);
-		Logger.getLogger().hexDump(Level.INFO, bp.marshal());
+		System.out.println(bp.toByteArray().length);
+		Logger.getLogger().hexDump(Level.INFO, bp.toByteArray());
 	}
 }

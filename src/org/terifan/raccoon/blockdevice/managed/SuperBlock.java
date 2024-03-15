@@ -83,7 +83,7 @@ class SuperBlock
 			mGeneration = marshaller.read();
 			mCreateTime = marshaller.read();
 			mChangedTime = marshaller.read();
-			mSpaceMapBlockPointer = new BlockPointer().unmarshal((byte[])marshaller.read());
+			mSpaceMapBlockPointer = new BlockPointer().fromByteArray((byte[])marshaller.read());
 			Document metadata = marshaller.read();
 
 			return metadata;
@@ -103,7 +103,7 @@ class SuperBlock
 			marshaller.write(mGeneration);
 			marshaller.write(mCreateTime);
 			marshaller.write(mChangedTime);
-			marshaller.write(mSpaceMapBlockPointer.marshal());
+			marshaller.write(mSpaceMapBlockPointer.toByteArray());
 			marshaller.write(aMetadata);
 		}
 

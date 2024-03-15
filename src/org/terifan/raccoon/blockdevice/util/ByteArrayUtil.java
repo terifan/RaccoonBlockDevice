@@ -39,9 +39,10 @@ public final class ByteArrayUtil
 	}
 
 
-	public static void putInt8(byte[] aBuffer, int aOffset, int aValue)
+	public static byte[] putInt8(byte[] aBuffer, int aOffset, int aValue)
 	{
 		aBuffer[aOffset] = (byte)aValue;
+		return aBuffer;
 	}
 
 
@@ -52,10 +53,11 @@ public final class ByteArrayUtil
 	}
 
 
-	public static void putInt16(byte[] aBuffer, int aPosition, int aValue)
+	public static byte[] putInt16(byte[] aBuffer, int aPosition, int aValue)
 	{
 		aBuffer[aPosition++] = (byte)(aValue >> 8);
 		aBuffer[aPosition] = (byte)(aValue);
+		return aBuffer;
 	}
 
 
@@ -67,11 +69,18 @@ public final class ByteArrayUtil
 	}
 
 
-	public static void putInt24(byte[] aBuffer, int aPosition, int aValue)
+	public static byte[] putInt24(byte[] aBuffer, int aPosition, int aValue)
 	{
 		aBuffer[aPosition++] = (byte)(aValue >> 16);
 		aBuffer[aPosition++] = (byte)(aValue >> 8);
 		aBuffer[aPosition] = (byte)(aValue);
+		return aBuffer;
+	}
+
+
+	public static long getInt32U(byte[] aBuffer, int aPosition)
+	{
+		return 0xffffffffL & getInt32(aBuffer, aPosition);
 	}
 
 
@@ -84,16 +93,17 @@ public final class ByteArrayUtil
 	}
 
 
-	public static void putInt32(byte[] aBuffer, int aPosition, int aValue)
+	public static byte[] putInt32(byte[] aBuffer, int aPosition, int aValue)
 	{
 		aBuffer[aPosition++] = (byte)(aValue >>> 24);
 		aBuffer[aPosition++] = (byte)(aValue >> 16);
 		aBuffer[aPosition++] = (byte)(aValue >> 8);
 		aBuffer[aPosition] = (byte)(aValue);
+		return aBuffer;
 	}
 
 
-	public static void putInt64(byte[] aBuffer, int aOffset, long aValue)
+	public static byte[] putInt64(byte[] aBuffer, int aOffset, long aValue)
 	{
 		aBuffer[aOffset + 7] = (byte)(aValue);
 		aBuffer[aOffset + 6] = (byte)(aValue >>> 8);
@@ -103,6 +113,7 @@ public final class ByteArrayUtil
 		aBuffer[aOffset + 2] = (byte)(aValue >>> 40);
 		aBuffer[aOffset + 1] = (byte)(aValue >>> 48);
 		aBuffer[aOffset] = (byte)(aValue >>> 56);
+		return aBuffer;
 	}
 
 
@@ -120,7 +131,7 @@ public final class ByteArrayUtil
 
 
 	// little endian
-	public static void putInt64LE(byte[] aBuffer, int aOffset, long aValue)
+	public static byte[] putInt64LE(byte[] aBuffer, int aOffset, long aValue)
 	{
 		aBuffer[aOffset] = (byte)(aValue);
 		aBuffer[aOffset + 1] = (byte)(aValue >>> 8);
@@ -130,6 +141,7 @@ public final class ByteArrayUtil
 		aBuffer[aOffset + 5] = (byte)(aValue >>> 40);
 		aBuffer[aOffset + 6] = (byte)(aValue >>> 48);
 		aBuffer[aOffset + 7] = (byte)(aValue >>> 56);
+		return aBuffer;
 	}
 
 
@@ -158,7 +170,7 @@ public final class ByteArrayUtil
 
 	public static void copyInt32(byte[] aIn, int aInOffset, int[] aOut, int aOutOffset, int aNumInts)
 	{
-		for (int i = 0; i < aNumInts; i++, aInOffset+=4)
+		for (int i = 0; i < aNumInts; i++, aInOffset += 4)
 		{
 			aOut[aOutOffset++] = getInt32(aIn, aInOffset);
 		}
@@ -167,7 +179,7 @@ public final class ByteArrayUtil
 
 	public static void copyInt32(int[] aIn, int aInOffset, byte[] aOut, int aOutOffset, int aNumInts)
 	{
-		for (int i = 0; i < aNumInts; i++, aOutOffset+=4, aInOffset++)
+		for (int i = 0; i < aNumInts; i++, aOutOffset += 4, aInOffset++)
 		{
 			putInt32(aOut, aOutOffset, aIn[aInOffset]);
 		}

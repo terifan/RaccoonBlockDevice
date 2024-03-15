@@ -126,7 +126,7 @@ class LobPage
 			return null;
 		}
 
-		return new BlockPointer().unmarshal(Arrays.copyOfRange(mBuffer, offset, offset + BlockPointer.SIZE));
+		return new BlockPointer().fromByteArray(Arrays.copyOfRange(mBuffer, offset, offset + BlockPointer.SIZE));
 	}
 
 
@@ -153,7 +153,7 @@ class LobPage
 				{
 					if (child.mBlockPointer != null)
 					{
-						System.arraycopy(child.mBlockPointer.marshal(), 0, mBuffer, i * BlockPointer.SIZE, BlockPointer.SIZE);
+						System.arraycopy(child.mBlockPointer.toByteArray(), 0, mBuffer, i * BlockPointer.SIZE, BlockPointer.SIZE);
 						detectedData |= child.mBlockPointer.getBlockType() != BlockType.HOLE;
 					}
 					else

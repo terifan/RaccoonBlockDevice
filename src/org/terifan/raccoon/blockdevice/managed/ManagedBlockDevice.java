@@ -2,6 +2,7 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import java.io.IOException;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
@@ -11,7 +12,7 @@ public class ManagedBlockDevice implements AutoCloseable
 {
 	private final Logger log = Logger.getLogger();
 
-	private BlockStorage mBlockStorage;
+	private final BlockStorage mBlockStorage;
 	private SuperBlock mSuperBlock;
 	private int mBlockSize;
 	private boolean mModified;
@@ -33,6 +34,21 @@ public class ManagedBlockDevice implements AutoCloseable
 		}
 
 		mBlockStorage = aBlockStorage;
+	}
+
+
+	public ManagedBlockDevice open(DeviceAccessOptions aOptions)
+	{
+		if (mBlockStorage == null)
+		{
+			throw new IllegalArgumentException();
+		}
+		if (aOptions == null)
+		{
+			throw new IllegalArgumentException();
+		}
+
+		mBlockStorage.open(aOptions);
 
 		mMetadata = new Document();
 		mReservedBlocks = 2;
@@ -41,6 +57,8 @@ public class ManagedBlockDevice implements AutoCloseable
 		mWasCreated = mBlockStorage.size() < mReservedBlocks;
 
 		init();
+
+		return this;
 	}
 
 
@@ -169,7 +187,6 @@ public class ManagedBlockDevice implements AutoCloseable
 		{
 			mBlockStorage.resize(mSpaceMap.getRangeMap().getLastBlockIndex());
 			mBlockStorage.close();
-			mBlockStorage = null;
 		}
 	}
 

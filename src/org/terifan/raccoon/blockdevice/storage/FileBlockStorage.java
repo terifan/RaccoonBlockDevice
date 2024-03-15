@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
 import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.managed.SyncMode;
 
@@ -24,30 +25,49 @@ public class FileBlockStorage implements BlockStorage
 	protected FileLock mFileLock;
 	protected SyncMode mSyncMode;
 	protected int mBlockSize;
-	private final boolean mReadOnly;
+	protected boolean mReadOnly;
 
 
 	public FileBlockStorage(Path aPath)
 	{
-		this(aPath, DEFAULT_BLOCK_SIZE, false);
+		this(aPath, DEFAULT_BLOCK_SIZE);
 	}
 
 
 	public FileBlockStorage(Path aPath, int aBlockSize)
 	{
-		this(aPath, aBlockSize, false);
-	}
-
-
-	public FileBlockStorage(Path aPath, int aBlockSize, boolean aReadOnly)
-	{
 		mPath = aPath;
 		mBlockSize = aBlockSize;
 		mSyncMode = SyncMode.DOUBLE;
-		mReadOnly = aReadOnly;
+	}
+
+
+	@Override
+	public void open(DeviceAccessOptions aOptions)
+	{
+		mReadOnly = aOptions == DeviceAccessOptions.READ_ONLY;
 
 		try
 		{
+			if (Files.exists(mPath))
+			{
+				if (aOptions == DeviceAccessOptions.CREATE)
+				{
+					if (!Files.deleteIfExists(mPath))
+					{
+						throw new RaccoonIOException("Failed to delete existing file: " + mPath);
+					}
+				}
+				else if (mReadOnly && Files.size(mPath) == 0)
+				{
+					throw new RaccoonIOException("File is empty.");
+				}
+			}
+			else if (mReadOnly)
+			{
+				throw new RaccoonIOException("File not found: " + mPath);
+			}
+
 			if (mReadOnly)
 			{
 				mFileChannel = FileChannel.open(mPath, StandardOpenOption.CREATE, StandardOpenOption.READ);

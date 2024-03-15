@@ -83,7 +83,7 @@ public class LobByteChannel implements SeekableByteChannel
 		byte[] pointer = mHeader.getBinary(IX_POINTER);
 		if (pointer != null)
 		{
-			mRoot = LobPage.load(this, new BlockPointer().unmarshal(pointer));
+			mRoot = LobPage.load(this, new BlockPointer().fromByteArray(pointer));
 		}
 		else
 		{
@@ -244,7 +244,7 @@ public class LobByteChannel implements SeekableByteChannel
 		flush();
 
 		mHeader
-			.put(IX_POINTER, mRoot.mBlockPointer.marshal())
+			.put(IX_POINTER, mRoot.mBlockPointer.toByteArray())
 			.put(IX_VERSION, 0)
 			.put(IX_LENGTH, mLength)
 			.put(IX_NODES_PER_PAGE, mNodesPerPage)
@@ -501,7 +501,7 @@ public class LobByteChannel implements SeekableByteChannel
 	@Override
 	public String toString()
 	{
-		return String.format("{logic=%d, pointer=%S}", mHeader.get(IX_LENGTH, 0L), new BlockPointer().unmarshal(mHeader.get(IX_POINTER)));
+		return String.format("{logic=%d, pointer=%S}", mHeader.get(IX_LENGTH, 0L), new BlockPointer().fromByteArray(mHeader.get(IX_POINTER)));
 	}
 
 

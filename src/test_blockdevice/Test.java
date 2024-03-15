@@ -16,8 +16,8 @@ import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.secure.SecureBlockDevice;
 import org.terifan.logging.Level;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
 import org.terifan.raccoon.document.Array;
-import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 
 
 public class Test
@@ -34,9 +34,9 @@ public class Test
 
 			MemoryBlockStorage blockStorage = new MemoryBlockStorage(512);
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.CREATE))
 			{
-				Document header = dev.getMetadata().computeIfAbsent("lob", k -> Document.of("leaf:1024,node:1024,compress=lzjb"));
+				Document header = dev.getMetadata().computeIfAbsent("lob", k -> Document.of("leaf:1024,node:1024,compress:lzjb"));
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.CREATE, null))
 				{
 					byte[] data = new byte[8192];
@@ -53,7 +53,7 @@ public class Test
 //				System.out.println(header);
 			}
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.APPEND))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
@@ -71,7 +71,7 @@ public class Test
 				}
 			}
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.APPEND))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
@@ -89,7 +89,7 @@ public class Test
 
 			byte[] buffer = new byte[1024*1024*3];
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.APPEND))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
@@ -114,7 +114,7 @@ public class Test
 				}
 			}
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.APPEND))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.APPEND, null))
@@ -139,7 +139,7 @@ public class Test
 				dev.commit();
 			}
 
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(blockStorage).open(DeviceAccessOptions.APPEND))
 			{
 				Document header = dev.getMetadata().computeIfAbsent("lob", k -> new Document());
 				try (LobByteChannel lob = new LobByteChannel(new BlockAccessor(dev), header, LobOpenOption.READ, null))
@@ -418,7 +418,7 @@ public class Test
 			rnd.nextBytes(lobData);
 
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512, false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512))))
 			{
 				int[] blockKey = rnd.ints(4).toArray();
 				long blockIndex = dev.allocBlock(directBlockData.length / dev.getBlockSize());
@@ -440,7 +440,7 @@ public class Test
 
 //			Log.setLevel(LogLevel.DEBUG);
 //			try (ManagedBlockDevice dev = new ManagedBlockDevice(new FileBlockDevice(Paths.get("d:\\test.dev"))))
-			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512, false))))
+			try (ManagedBlockDevice dev = new ManagedBlockDevice(new SecureBlockDevice(ac, new FileBlockStorage(Paths.get("d:\\test.dev"), 512))))
 			{
 //				System.out.println(dev.getAllocatedSpace());
 //				System.out.println(dev.getFreeSpace());

@@ -27,13 +27,13 @@ public final class AccessCredentials
 
 	public AccessCredentials(char[] aPassword)
 	{
-		this(aPassword, DEFAULT_ENCRYPTION, DEFAULT_KEY_GENERATOR, DEFAULT_CIPHER_MODE);
+		this(aPassword, DEFAULT_ENCRYPTION, DEFAULT_KEY_GENERATOR, DEFAULT_CIPHER_MODE, DEFAULT_ITERATION_COUNT);
 	}
 
 
-	public AccessCredentials(char[] aPassword, EncryptionFunction aEncryptionFunction, KeyGenerationFunction aKeyFunction, CipherModeFunction aCipherModeFunction)
+	public AccessCredentials(char[] aPassword, EncryptionFunction aEncryptionFunction, KeyGenerationFunction aKeyFunction, CipherModeFunction aCipherModeFunction, int aIterationCount)
 	{
-		mIterationCount = DEFAULT_ITERATION_COUNT;
+		mIterationCount = aIterationCount;
 		mEncryptionFunction = aEncryptionFunction;
 		mKeyGeneratorFunction = aKeyFunction;
 		mCipherModeFunction = aCipherModeFunction;

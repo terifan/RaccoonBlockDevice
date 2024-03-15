@@ -5,6 +5,7 @@ import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.cryptography.SecretKey;
 import static java.util.Arrays.fill;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getBytes;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
@@ -12,6 +13,7 @@ import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
 import org.terifan.raccoon.security.random.ISAAC.PRNG;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
+
 
 
 /**
@@ -35,6 +37,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	private transient int mBootBlockCount;
 	private transient BlockStorage mBlockDevice;
 	private transient CipherImplementation mCipherImplementation;
+	private transient AccessCredentials mAccessCredentials;
 
 
 	public SecureBlockDevice(AccessCredentials aAccessCredentials, BlockStorage aBlockDevice) throws InvalidPasswordException
@@ -48,9 +51,15 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 			throw new IllegalArgumentException("AccessCredentials is null");
 		}
 
-		mBootBlockCount = 2;
+		mAccessCredentials = aAccessCredentials;
 		mBlockDevice = aBlockDevice;
+		mBootBlockCount = 2;
+	}
 
+
+	@Override
+	public void open(DeviceAccessOptions aOptions)
+	{
 		if (mBlockDevice.size() == 0)
 		{
 			log.i("create boot block");
@@ -63,11 +72,11 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 				for (int index = 0; index < mBootBlockCount; index++)
 				{
-					byte[] blockData = createBootBlock(aAccessCredentials, payload, index, mBlockDevice.getBlockSize());
+					byte[] blockData = createBootBlock(mAccessCredentials, payload, index, mBlockDevice.getBlockSize());
 
 					mBlockDevice.writeBlock(index, blockData, 0, blockData.length, new int[4]);
 
-					CipherImplementation cipher = readBootBlock(aAccessCredentials, blockData, index, true);
+					CipherImplementation cipher = readBootBlock(mAccessCredentials, blockData, index, true);
 
 					if (cipher == null)
 					{
@@ -83,8 +92,6 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		}
 		else
 		{
-			mBlockDevice = aBlockDevice;
-
 			byte[] blockData = new byte[mBlockDevice.getBlockSize()];
 
 			for (int index = 0; index < mBootBlockCount; index++)
@@ -94,7 +101,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 				mBlockDevice.readBlock(index, blockData, 0, blockData.length, new int[4]);
 
-				mCipherImplementation = readBootBlock(aAccessCredentials, blockData, index, false);
+				mCipherImplementation = readBootBlock(mAccessCredentials, blockData, index, false);
 
 				if (mCipherImplementation != null)
 				{

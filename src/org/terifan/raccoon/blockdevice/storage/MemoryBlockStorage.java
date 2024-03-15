@@ -8,6 +8,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import org.terifan.logging.Level;
 import org.terifan.logging.Logger;
+import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
 import org.terifan.raccoon.blockdevice.RaccoonIOException;
 
 
@@ -15,7 +16,7 @@ public class MemoryBlockStorage implements BlockStorage
 {
 	private final Logger log = Logger.getLogger();
 
-	private SortedMap<Long, byte[]> mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
+	private SortedMap<Long, byte[]> mStorage;
 	private int mBlockSize;
 
 
@@ -38,14 +39,21 @@ public class MemoryBlockStorage implements BlockStorage
 	}
 
 
-	public void setBlockSize(int aBlockSize)
+	@Override
+	public void open(DeviceAccessOptions aOptions)
 	{
-		if (mBlockSize != aBlockSize)
-		{
-			mStorage.clear();
-		}
-		mBlockSize = aBlockSize;
+		mStorage = Collections.synchronizedSortedMap(new TreeMap<>());
 	}
+
+
+//	public void setBlockSize(int aBlockSize)
+//	{
+//		if (mBlockSize != aBlockSize)
+//		{
+//			mStorage.clear();
+//		}
+//		mBlockSize = aBlockSize;
+//	}
 
 
 	@Override

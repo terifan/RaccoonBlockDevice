@@ -74,7 +74,7 @@ public class SecureBlockDeviceNGTest
 
 					long t0 = System.currentTimeMillis();
 
-					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray(), ef, kgf, cmf).setIterationCount(1), blockDevice))
+					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray(), ef, kgf, cmf, 1), blockDevice))
 					{
 						for (int i = 0; i < numUnits / blocksPerUnit; i++)
 						{
