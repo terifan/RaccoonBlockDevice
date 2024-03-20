@@ -42,7 +42,7 @@ public final class BlockPointer
 	public BlockPointer()
 	{
 		mBuffer = new byte[SIZE];
-		setBlockIndex0(-1);
+		setBlockType(BlockType.ILLEGAL);
 	}
 
 
