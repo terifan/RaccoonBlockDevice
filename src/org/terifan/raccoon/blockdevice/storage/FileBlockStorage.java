@@ -10,12 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
+import org.terifan.raccoon.blockdevice.BlockDeviceOpenOption;
 import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.managed.SyncMode;
 
 
-public class FileBlockStorage implements BlockStorage
+public class FileBlockStorage extends BlockStorage<FileBlockStorage>
 {
 	private final Logger log = Logger.getLogger();
 	private final static int DEFAULT_BLOCK_SIZE = 4096;
@@ -43,15 +43,17 @@ public class FileBlockStorage implements BlockStorage
 
 
 	@Override
-	public void open(DeviceAccessOptions aOptions)
+	public FileBlockStorage open(BlockDeviceOpenOption aOption)
 	{
-		mReadOnly = aOptions == DeviceAccessOptions.READ_ONLY;
+		setOpenState();
+
+		mReadOnly = aOption == BlockDeviceOpenOption.READ_ONLY;
 
 		try
 		{
 			if (Files.exists(mPath))
 			{
-				if (aOptions == DeviceAccessOptions.CREATE)
+				if (aOption == BlockDeviceOpenOption.REPLACE)
 				{
 					if (!Files.deleteIfExists(mPath))
 					{
@@ -63,7 +65,7 @@ public class FileBlockStorage implements BlockStorage
 					throw new RaccoonIOException("File is empty.");
 				}
 			}
-			else if (mReadOnly)
+			else if (mReadOnly || aOption == BlockDeviceOpenOption.OPEN)
 			{
 				throw new RaccoonIOException("File not found: " + mPath);
 			}
@@ -97,6 +99,8 @@ public class FileBlockStorage implements BlockStorage
 		{
 			throw new RaccoonIOException(e);
 		}
+
+		return this;
 	}
 
 
@@ -109,6 +113,8 @@ public class FileBlockStorage implements BlockStorage
 
 	public void readBlock(long aBlockIndex, ByteBuffer aBuffer, long[] aBlockKey)
 	{
+		assertOpen();
+
 		log.t("read block {} +{}", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
 
 		try
@@ -124,6 +130,8 @@ public class FileBlockStorage implements BlockStorage
 
 	public void writeBlock(long aBlockIndex, ByteBuffer aBuffer, long[] aBlockKey)
 	{
+		assertOpen();
+
 		log.t("write block {} +{}", aBlockIndex, (aBuffer.limit() - aBuffer.position()) / mBlockSize);
 
 		try
@@ -140,6 +148,8 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void readBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
+		assertOpen();
+
 		log.t("read block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		try
@@ -157,6 +167,8 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void writeBlock(long aBlockIndex, byte[] aBuffer, int aBufferOffset, int aBufferLength, int[] aBlockKey)
 	{
+		assertOpen();
+
 		log.t("write block {} +{}", aBlockIndex, aBufferLength / mBlockSize);
 
 		try
@@ -178,43 +190,48 @@ public class FileBlockStorage implements BlockStorage
 
 		synchronized (this)
 		{
-			if (mSyncMode == SyncMode.ONCLOSE)
+			try
 			{
-				try
+				if (mSyncMode == SyncMode.ONCLOSE)
 				{
-					mFileChannel.force(true);
+					try
+					{
+						mFileChannel.force(true);
+					}
+					catch (Exception | Error e)
+					{
+						throw new RaccoonIOException(e);
+					}
 				}
-				catch (IOException e)
+				if (mFileLock != null)
 				{
-					throw new RaccoonIOException(e);
+					try
+					{
+						mFileLock.release();
+						mFileLock.close();
+					}
+					catch (Exception | Error e)
+					{
+						log.e("Unhandled error when releasing file lock", e);
+					}
+				}
+				if (mFileChannel != null)
+				{
+					try
+					{
+						mFileChannel.close();
+					}
+					catch (Exception | Error e)
+					{
+						throw new RaccoonIOException(e);
+					}
 				}
 			}
-
-			if (mFileLock != null)
+			finally
 			{
-				try
-				{
-					mFileLock.release();
-					mFileLock.close();
-					mFileLock = null;
-				}
-				catch (Throwable e)
-				{
-					log.e("Unhandled error when releasing file lock", e);
-				}
-			}
-
-			if (mFileChannel != null)
-			{
-				try
-				{
-					mFileChannel.close();
-				}
-				catch (IOException e)
-				{
-					throw new RaccoonIOException(e);
-				}
+				mFileLock = null;
 				mFileChannel = null;
+				setClosedState();
 			}
 		}
 	}
@@ -248,6 +265,8 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void commit(int aIndex, boolean aMetadata)
 	{
+		assertOpen();
+
 		log.d("commit");
 
 		if (aIndex == 0 && mSyncMode != SyncMode.OFF || aIndex == 1 && mSyncMode == SyncMode.DOUBLE)
@@ -274,6 +293,8 @@ public class FileBlockStorage implements BlockStorage
 	@Override
 	public void resize(long aNumberOfBlocks)
 	{
+		assertOpen();
+
 		try
 		{
 			mFileChannel.truncate(aNumberOfBlocks * mBlockSize);

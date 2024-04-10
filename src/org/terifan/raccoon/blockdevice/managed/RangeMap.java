@@ -191,7 +191,7 @@ public class RangeMap implements Cloneable
 		try
 		{
 			RangeMap map = (RangeMap)super.clone();
-			map.mMap = (TreeMap<Long, Long>)this.mMap.clone();
+			map.mMap = new TreeMap<>(mMap);
 			return map;
 		}
 		catch (CloneNotSupportedException e)

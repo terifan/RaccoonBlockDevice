@@ -7,7 +7,6 @@ import org.terifan.raccoon.blockdevice.BlockPointer;
 import org.terifan.raccoon.blockdevice.compressor.CompressorAlgorithm;
 import org.terifan.raccoon.blockdevice.util.ByteArrayBuffer;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.messagedigest.SHA3;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
@@ -137,7 +136,7 @@ class SpaceMap
 		aSpaceMapBlockPointer.setLogicalSize(buffer.position());
 		aSpaceMapBlockPointer.setPhysicalSize(buffer.position());
 		aSpaceMapBlockPointer.setChecksumAlgorithm((byte)0); // not used
-		aSpaceMapBlockPointer.setChecksum(new SHA3().hash128(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration()));
+		aSpaceMapBlockPointer.setChecksum(SHA3.hash128_512(buffer.array(), 0, buffer.position(), aSpaceMapBlockPointer.getGeneration()));
 		aSpaceMapBlockPointer.setBlockKey(blockKey);
 
 		// Pad buffer to block size
@@ -178,7 +177,7 @@ class SpaceMap
 
 			aBlockDeviceDirect.readBlock(blockPointer.getBlockIndex0(), buffer.array(), 0, blockPointer.getAllocatedSize(), blockPointer.getBlockKey());
 
-			int[] checksum = new SHA3().hash128(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration());
+			int[] checksum = SHA3.hash128_512(buffer.array(), 0, blockPointer.getLogicalSize(), blockPointer.getGeneration());
 
 			if (!Arrays.equals(blockPointer.getChecksum(), checksum))
 			{

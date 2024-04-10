@@ -4,6 +4,7 @@ import org.terifan.raccoon.blockdevice.storage.MemoryBlockStorage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
+import org.terifan.raccoon.blockdevice.BlockDeviceOpenOption;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
@@ -26,6 +27,7 @@ public class SecureBlockDeviceNGTest
 //		try (PhysicalBlockDevice device = blockDevice)
 		try (SecureBlockDevice device = new SecureBlockDevice(accessCredentials, blockDevice))
 		{
+			device.open(BlockDeviceOpenOption.CREATE);
 			device.writeBlock(0, out, 0, out.length, key);
 		}
 
@@ -34,6 +36,7 @@ public class SecureBlockDeviceNGTest
 //		try (PhysicalBlockDevice device = blockDevice)
 		try (SecureBlockDevice device = new SecureBlockDevice(accessCredentials, blockDevice))
 		{
+			device.open(BlockDeviceOpenOption.OPEN);
 			device.readBlock(0, in, 0, in.length, key);
 		}
 
@@ -57,6 +60,7 @@ public class SecureBlockDeviceNGTest
 					int blocksPerUnit = 4;
 
 					MemoryBlockStorage blockDevice = new MemoryBlockStorage(unitSize);
+					blockDevice.open(BlockDeviceOpenOption.CREATE);
 
 					int[][] blockKeys = new int[numUnits][4];
 					for (int i = 0; i < numUnits; i++)
@@ -74,8 +78,9 @@ public class SecureBlockDeviceNGTest
 
 					long t0 = System.currentTimeMillis();
 
-					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray(), ef, kgf, cmf, 1), blockDevice))
+					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password").setIterationCount(1).setEncryptionFunction(ef).setKeyGeneratorFunction(kgf).setCipherModeFunction(cmf), blockDevice))
 					{
+						device.open(BlockDeviceOpenOption.CREATE);
 						for (int i = 0; i < numUnits / blocksPerUnit; i++)
 						{
 							device.writeBlock(blocksPerUnit * i, input, blocksPerUnit * i * unitSize, blocksPerUnit * unitSize, blockKeys[i]);
@@ -88,8 +93,9 @@ public class SecureBlockDeviceNGTest
 
 					byte[] output = new byte[numUnits * unitSize];
 
-					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password".toCharArray()).setIterationCount(1), blockDevice))
+					try (SecureBlockDevice device = new SecureBlockDevice(new AccessCredentials("password").setIterationCount(1), blockDevice))
 					{
+						device.open(BlockDeviceOpenOption.CREATE);
 						for (int i = 0; i < numUnits / blocksPerUnit; i++)
 						{
 							device.readBlock(blocksPerUnit * i, output, blocksPerUnit * i * unitSize, blocksPerUnit * unitSize, blockKeys[i]);

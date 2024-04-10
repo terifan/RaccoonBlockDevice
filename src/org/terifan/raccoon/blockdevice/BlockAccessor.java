@@ -17,13 +17,14 @@ public class BlockAccessor implements AutoCloseable
 	private final ManagedBlockDevice mBlockDevice;
 	private final boolean mCloseUnderlyingDevice;
 
-	private int mChecksumAlgorithm = ChecksumAlgorithm.MurmurHash3;
+	private int mChecksumAlgorithm;
 
 
 	public BlockAccessor(ManagedBlockDevice aBlockDevice)
 	{
 		mBlockDevice = aBlockDevice;
 		mCloseUnderlyingDevice = false;
+		mChecksumAlgorithm = ChecksumAlgorithm.FLETCHER4;
 	}
 
 
@@ -31,6 +32,7 @@ public class BlockAccessor implements AutoCloseable
 	{
 		mBlockDevice = aBlockDevice;
 		mCloseUnderlyingDevice = aCloseUnderlyingDevice;
+		mChecksumAlgorithm = ChecksumAlgorithm.FLETCHER4;
 	}
 
 

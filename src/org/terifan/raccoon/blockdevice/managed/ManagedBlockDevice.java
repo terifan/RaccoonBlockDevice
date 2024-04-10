@@ -2,7 +2,7 @@ package org.terifan.raccoon.blockdevice.managed;
 
 import java.io.IOException;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
+import org.terifan.raccoon.blockdevice.BlockDeviceOpenOption;
 import org.terifan.raccoon.document.Document;
 import org.terifan.raccoon.blockdevice.RaccoonIOException;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
@@ -12,13 +12,13 @@ public class ManagedBlockDevice implements AutoCloseable
 {
 	private final Logger log = Logger.getLogger();
 
-	private final BlockStorage mBlockStorage;
+	private BlockStorage mBlockStorage;
 	private SuperBlock mSuperBlock;
-	private int mBlockSize;
-	private boolean mModified;
-	private boolean mWasCreated;
 	private SpaceMap mSpaceMap;
 	private Document mMetadata;
+	private boolean mModified;
+	private boolean mWasCreated;
+	private int mBlockSize;
 	private int mReservedBlocks;
 
 
@@ -28,16 +28,12 @@ public class ManagedBlockDevice implements AutoCloseable
 		{
 			throw new IllegalArgumentException("aBlockStorage is null");
 		}
-		if (aBlockStorage.getBlockSize() < 512 || (aBlockStorage.getBlockSize() & (aBlockStorage.getBlockSize() - 1)) != 0)
-		{
-			throw new IllegalArgumentException("The block size must be power of 2 and at least 512 bytes in length.");
-		}
 
 		mBlockStorage = aBlockStorage;
 	}
 
 
-	public ManagedBlockDevice open(DeviceAccessOptions aOptions)
+	public ManagedBlockDevice open(BlockDeviceOpenOption aOptions)
 	{
 		if (mBlockStorage == null)
 		{
@@ -50,20 +46,17 @@ public class ManagedBlockDevice implements AutoCloseable
 
 		mBlockStorage.open(aOptions);
 
+		if (mBlockStorage.getBlockSize() < 512 || (mBlockStorage.getBlockSize() & (mBlockStorage.getBlockSize() - 1)) != 0)
+		{
+			throw new IllegalArgumentException("The block size must be power of 2 and at least 512 bytes in length.");
+		}
+
 		mMetadata = new Document();
 		mReservedBlocks = 2;
 
 		mBlockSize = mBlockStorage.getBlockSize();
 		mWasCreated = mBlockStorage.size() < mReservedBlocks;
 
-		init();
-
-		return this;
-	}
-
-
-	private void init()
-	{
 		if (mWasCreated)
 		{
 			createBlockDevice();
@@ -72,6 +65,8 @@ public class ManagedBlockDevice implements AutoCloseable
 		{
 			loadBlockDevice();
 		}
+
+		return this;
 	}
 
 
@@ -375,7 +370,14 @@ public class ManagedBlockDevice implements AutoCloseable
 			mSpaceMap.reset();
 			mSpaceMap.rollback();
 
-			init();
+			if (mWasCreated)
+			{
+				createBlockDevice();
+			}
+			else
+			{
+				loadBlockDevice();
+			}
 
 			mModified = false;
 

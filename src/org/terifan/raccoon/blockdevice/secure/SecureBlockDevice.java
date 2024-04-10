@@ -5,12 +5,11 @@ import org.terifan.raccoon.security.messagedigest.MurmurHash3;
 import org.terifan.raccoon.security.cryptography.SecretKey;
 import static java.util.Arrays.fill;
 import org.terifan.logging.Logger;
-import org.terifan.raccoon.blockdevice.DeviceAccessOptions;
+import org.terifan.raccoon.blockdevice.BlockDeviceOpenOption;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getBytes;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.getInt32;
 import static org.terifan.raccoon.blockdevice.util.ByteArrayUtil.putInt32;
 import org.terifan.raccoon.security.cryptography.ciphermode.CipherMode;
-import org.terifan.raccoon.security.random.ISAAC.PRNG;
 import org.terifan.raccoon.security.random.SecureRandom;
 import org.terifan.raccoon.blockdevice.storage.BlockStorage;
 
@@ -22,7 +21,7 @@ import org.terifan.raccoon.blockdevice.storage.BlockStorage;
  * [boot block][super block 0][super block 1][other blocks]
  *
  */
-public final class SecureBlockDevice implements BlockStorage, AutoCloseable
+public final class SecureBlockDevice extends BlockStorage implements AutoCloseable
 {
 	private final static Logger log = Logger.getLogger();
 
@@ -34,8 +33,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	private final static int KEY_POOL_SIZE = KEY_SIZE_BYTES + 3 * KEY_SIZE_BYTES + 3 * IV_SIZE;
 	private final static int CHECKSUM_SEED = 0xfedcba98;
 
+	private final transient BlockStorage mBlockDevice;
 	private transient int mBootBlockCount;
-	private transient BlockStorage mBlockDevice;
 	private transient CipherImplementation mCipherImplementation;
 	private transient AccessCredentials mAccessCredentials;
 
@@ -58,16 +57,19 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 
 	@Override
-	public void open(DeviceAccessOptions aOptions)
+	public SecureBlockDevice open(BlockDeviceOpenOption aOption)
 	{
+		setOpenState();
+
+		mBlockDevice.open(aOption);
+
 		if (mBlockDevice.size() == 0)
 		{
 			log.i("create boot block");
 			log.inc();
 
-			for (boolean valid = false; !valid;)
+			outer: for (;;)
 			{
-				valid = true;
 				byte[] payload = new SecureRandom().bytes(PAYLOAD_SIZE).toArray();
 
 				for (int index = 0; index < mBootBlockCount; index++)
@@ -80,12 +82,15 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 					if (cipher == null)
 					{
-						valid = false;
-						break;
+						continue outer;
 					}
-
-					mCipherImplementation = cipher;
+					if (index == 0)
+					{
+						mCipherImplementation = cipher;
+					}
 				}
+
+				break;
 			}
 
 			log.dec();
@@ -110,12 +115,14 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 				log.dec();
 			}
-
-			if (mCipherImplementation == null)
-			{
-				throw new InvalidPasswordException("Incorrect password or not a secure BlockDevice");
-			}
 		}
+
+		if (mCipherImplementation == null)
+		{
+			throw new InvalidPasswordException("Incorrect password or not a secure BlockDevice");
+		}
+
+		return this;
 	}
 
 
@@ -125,8 +132,9 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		byte[] padding = new byte[aBlockSize - SALT_SIZE - PAYLOAD_SIZE];
 
 		// padding and salt
-		PRNG.nextBytes(padding);
-		PRNG.nextBytes(salt);
+		SecureRandom prng = new SecureRandom();
+		prng.nextBytes(padding);
+		prng.nextBytes(salt);
 
 		// compute checksum
 		int checksum = computeChecksum(salt, aPayload);
@@ -135,7 +143,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		putInt32(aPayload, 0, checksum);
 
 		// create user key
-		byte[] userKeyPool = aAccessCredentials.generateKeyPool(aAccessCredentials.getKeyGeneratorFunction(), salt, KEY_POOL_SIZE);
+		byte[] userKeyPool = aAccessCredentials.generateKeyPool(salt, KEY_POOL_SIZE);
 
 		// encrypt payload
 		byte[] payload = aPayload.clone();
@@ -155,6 +163,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 
 	private static CipherImplementation readBootBlock(AccessCredentials aAccessCredentials, byte[] aBlockData, long aBlockIndex, boolean aVerifyFunctions)
 	{
+		AccessCredentials ac = aAccessCredentials.clone();
+
 		// extract the salt and payload
 		byte[] salt = getBytes(aBlockData, 0, SALT_SIZE);
 		byte[] payload = getBytes(aBlockData, SALT_SIZE, PAYLOAD_SIZE);
@@ -162,7 +172,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		for (KeyGenerationFunction keyGenerator : KeyGenerationFunction.values())
 		{
 			// create a user key using the key generator
-			byte[] userKeyPool = aAccessCredentials.generateKeyPool(keyGenerator, salt, KEY_POOL_SIZE);
+			byte[] userKeyPool = ac.setKeyGeneratorFunction(keyGenerator).generateKeyPool(salt, KEY_POOL_SIZE);
 
 			// decode boot block using all available ciphers
 			for (EncryptionFunction encryption : EncryptionFunction.values())
@@ -199,7 +209,7 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 			}
 		}
 
-		log.w("incorrect password or not a secure BlockDevice");
+		log.f("incorrect password or not a secure BlockDevice");
 		log.dec();
 
 		return null;
@@ -222,6 +232,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public void writeBlock(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength, final int[] aIV)
 	{
+		assertOpen();
+
 		assert aBlockIndex >= 0;
 		assert aIV.length == 4;
 
@@ -241,6 +253,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public void readBlock(final long aBlockIndex, final byte[] aBuffer, final int aBufferOffset, final int aBufferLength, final int[] aIV)
 	{
+		assertOpen();
+
 		assert aBlockIndex >= 0;
 		assert aIV.length == 4;
 
@@ -258,6 +272,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public int getBlockSize()
 	{
+		assertOpen();
+
 		return mBlockDevice.getBlockSize();
 	}
 
@@ -265,6 +281,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public long size()
 	{
+		assertOpen();
+
 		return mBlockDevice.size() - mBootBlockCount;
 	}
 
@@ -272,6 +290,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public void commit(int aIndex, boolean aMetadata)
 	{
+		assertOpen();
+
 		mBlockDevice.commit(aIndex, aMetadata);
 	}
 
@@ -279,6 +299,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public void resize(long aNumberOfBlocks)
 	{
+		assertOpen();
+
 		mBlockDevice.resize(aNumberOfBlocks + mBootBlockCount);
 	}
 
@@ -286,6 +308,8 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 	@Override
 	public void close()
 	{
+		setClosedState();
+
 		if (mCipherImplementation != null)
 		{
 			mCipherImplementation.reset();
@@ -295,7 +319,6 @@ public final class SecureBlockDevice implements BlockStorage, AutoCloseable
 		if (mBlockDevice != null)
 		{
 			mBlockDevice.close();
-			mBlockDevice = null;
 		}
 	}
 
