@@ -360,8 +360,8 @@ public final class BlockPointer
 		setBlockIndex1(aDocument.getArray("9").get(1, 0L));
 		setBlockIndex2(aDocument.getArray("9").get(2, 0L));
 		setGeneration(aDocument.getInt("10"));
-		setBlockKey(aDocument.getArray("11").asInts());
-		setChecksum(aDocument.getArray("12").asInts());
+		setBlockKey(aDocument.getArray("11").asIntArray());
+		setChecksum(aDocument.getArray("12").asIntArray());
 		return this;
 	}
 }
